@@ -1,0 +1,20 @@
+{
+  "name": "mca2025",
+  "version": "1.0.0",
+  "description": "Marmeto Choice Awards 2025",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "start": "npm run start --workspace=backend",
+    "dev": "npm run dev --workspace=backend",
+    "frontend": "cd frontend && npm start",
+    "dev:all": "concurrently \"npm run dev\" \"npm run frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "author": "",
+  "license": "ISC"
+}
