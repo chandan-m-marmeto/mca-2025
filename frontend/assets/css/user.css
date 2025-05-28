@@ -1,0 +1,826 @@
+/* SCOPED USER STYLES - Only apply when user dashboard is active */
+
+/* Only apply user styles when user dashboard is visible */
+#user-dashboard:not(.hidden),
+#user-dashboard.active,
+body:has(#user-dashboard:not(.hidden)) {
+    /* User-specific styles here */
+}
+
+/* Remove all global overrides and scope properly */
+.user-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f0f23, #1a1a2e, #16213e);
+    position: relative;
+    overflow-x: hidden;
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* PREMIUM HEADER DESIGN */
+.user-container .user-header {
+    position: relative;
+    text-align: center;
+    padding: 40px 20px 20px;
+    margin-bottom: 0;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.05));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.user-container .user-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%236366f1" fill-opacity="0.02"><circle cx="30" cy="30" r="1"/></g></svg>');
+    opacity: 0.3;
+    z-index: 1;
+}
+
+.user-container .user-header > * {
+    position: relative;
+    z-index: 2;
+}
+
+.user-container .user-title {
+    font-size: clamp(32px, 4vw, 42px);
+    font-weight: 700;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+}
+
+.user-container .user-subtitle {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 25px;
+}
+
+/* PREMIUM LOGOUT BUTTON */
+.user-container .user-header .btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.9);
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 100;
+}
+
+.user-container .user-header .btn:hover {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: rgba(248, 113, 113, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px rgba(248, 113, 113, 0.2);
+}
+
+/* PREMIUM VOTING CONTAINER */
+.user-container .voting-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    position: relative;
+}
+
+.user-container .question-container {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(30px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 40px;
+    margin-bottom: 30px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.user-container .question-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+    z-index: 1;
+}
+
+/* QUESTION HEADER */
+.user-container .question-header {
+    margin-bottom: 40px;
+    position: relative;
+    z-index: 2;
+}
+
+.user-container .question-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 500;
+}
+
+.user-container .question-status {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.user-container .question-title {
+    font-size: clamp(24px, 3vw, 32px);
+    font-weight: 700;
+    color: white;
+    margin-bottom: 12px;
+    text-align: center;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+}
+
+.user-container .question-description {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 16px;
+    text-align: center;
+    line-height: 1.6;
+    font-weight: 400;
+}
+
+/* PREMIUM NOMINEES GRID */
+.user-container .nominees-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin: 40px 0;
+    position: relative;
+    z-index: 2;
+}
+
+.user-container .nominee-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 28px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+}
+
+.user-container .nominee-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.05));
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 1;
+}
+
+.user-container .nominee-card:hover::before {
+    opacity: 1;
+}
+
+.user-container .nominee-card:hover {
+    border-color: rgba(99, 102, 241, 0.5);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 
+        0 20px 40px rgba(99, 102, 241, 0.15),
+        0 0 0 1px rgba(99, 102, 241, 0.1);
+}
+
+.user-container .nominee-card.selected {
+    border-color: #6366f1;
+    background: rgba(99, 102, 241, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 
+        0 16px 32px rgba(99, 102, 241, 0.2),
+        0 0 0 1px rgba(99, 102, 241, 0.3);
+}
+
+.user-container .nominee-card.selected::before {
+    opacity: 1;
+}
+
+.user-container .nominee-card > * {
+    position: relative;
+    z-index: 2;
+}
+
+/* PREMIUM AVATAR DESIGN */
+.user-container .nominee-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.user-container .nominee-card:hover .nominee-avatar {
+    border-color: rgba(99, 102, 241, 0.3);
+    transform: scale(1.05);
+}
+
+.user-container .nominee-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.user-container .nominee-info .nominee-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+}
+
+.user-container .nominee-votes {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* PREMIUM NAVIGATION BUTTONS */
+.user-container .navigation-buttons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 40px 0 20px;
+    gap: 20px;
+}
+
+.user-container .btn {
+    padding: 14px 28px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    backdrop-filter: blur(20px);
+    position: relative;
+    overflow: hidden;
+}
+
+.user-container .btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.6s ease;
+}
+
+.user-container .btn:hover::before {
+    left: 100%;
+}
+
+.user-container .btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.user-container .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.user-container .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.user-container .btn-primary {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+
+.user-container .btn-primary:hover {
+    background: linear-gradient(135deg, #5b59f0, #7c3aed);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+}
+
+.user-container .btn-success {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+.user-container .vote-button {
+    text-align: center;
+    margin-top: 30px;
+}
+
+.user-container .vote-button .btn {
+    padding: 16px 40px;
+    font-size: 16px;
+    min-width: 160px;
+}
+
+/* MEMORIES SECTION */
+.user-container .mca-memories {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 24px;
+    padding: 40px;
+    margin: 40px 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+}
+
+.user-container .memories-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.user-container .memories-header h2 {
+    font-size: 32px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+}
+
+.user-container .memories-header p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 16px;
+}
+
+.user-container .memories-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.user-container .memory-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.user-container .memory-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
+.user-container .memory-image {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 48px;
+}
+
+.user-container .memory-card h3 {
+    color: white;
+    font-size: 18px;
+    font-weight: 600;
+    padding: 20px 20px 10px;
+    margin: 0;
+}
+
+.user-container .memory-card p {
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0 20px 20px;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* NO QUESTIONS STATE */
+.user-container .no-questions-state {
+    text-align: center;
+    padding: 60px 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.user-container .empty-state {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 40px;
+}
+
+.user-container .empty-icon {
+    font-size: 48px;
+    color: rgba(255, 255, 255, 0.3);
+    margin-bottom: 20px;
+}
+
+.user-container .empty-state h3 {
+    color: white;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.user-container .empty-state p {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 0;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+    .user-container .user-header {
+        padding: 30px 15px 15px;
+    }
+    
+    .user-container .user-header .btn {
+        position: static;
+        margin: 0 auto 20px;
+        display: inline-flex;
+    }
+    
+    .user-container .voting-container {
+        padding: 20px 15px;
+    }
+    
+    .user-container .question-container {
+        padding: 30px 20px;
+    }
+    
+    .user-container .nominees-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .user-container .navigation-buttons {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .user-container .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .user-container .memories-gallery {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* UTILITY CLASSES */
+.user-container .text-center { text-align: center; }
+.user-container .mb-4 { margin-bottom: 1.5rem; }
+.user-container .mt-4 { margin-top: 1.5rem; }
+
+/* FLOATING BACKGROUND IMAGES FOR VOTING */
+.user-container::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+    overflow: hidden;
+}
+
+.floating-memories-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+    opacity: 0.7;
+}
+
+.floating-memory-image {
+    position: absolute;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    transition: opacity 0.8s ease;
+    opacity: 0;
+    backdrop-filter: blur(1px);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.floating-memory-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+    filter: brightness(0.9) contrast(1.1);
+}
+
+/* Different sizes for variety */
+.floating-memory-image.size-small {
+    width: 180px;
+    height: 120px;
+}
+
+.floating-memory-image.size-medium {
+    width: 280px;
+    height: 190px;
+}
+
+.floating-memory-image.size-large {
+    width: 380px;
+    height: 250px;
+}
+
+.floating-memory-image.size-xl {
+    width: 480px;
+    height: 320px;
+}
+
+.floating-memory-image.size-xxl {
+    width: 580px;
+    height: 390px;
+}
+
+/* Floating Animation Styles */
+@keyframes floatUp {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.8;
+    }
+    90% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-120vh) rotate(10deg);
+        opacity: 0;
+    }
+}
+
+@keyframes floatDiagonal {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.8;
+    }
+    90% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: translate(300px, -120vh) rotate(-15deg);
+        opacity: 0;
+    }
+}
+
+@keyframes floatSideways {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.8;
+    }
+    50% {
+        transform: translate(200px, -50vh) rotate(5deg);
+        opacity: 0.9;
+    }
+    90% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: translate(-100px, -120vh) rotate(-10deg);
+        opacity: 0;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.2;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.6;
+        transform: scale(1.05);
+    }
+}
+
+@keyframes drift {
+    0% {
+        transform: translateX(0) translateY(0) rotate(0deg);
+    }
+    25% {
+        transform: translateX(15px) translateY(-10px) rotate(1deg);
+    }
+    50% {
+        transform: translateX(-10px) translateY(-15px) rotate(-0.5deg);
+    }
+    75% {
+        transform: translateX(-12px) translateY(8px) rotate(0.8deg);
+    }
+    100% {
+        transform: translateX(0) translateY(0) rotate(0deg);
+    }
+}
+
+/* Apply animations */
+.floating-memory-image.anim-float-up {
+    animation: floatUp 20s linear infinite;
+}
+
+.floating-memory-image.anim-diagonal {
+    animation: floatDiagonal 25s linear infinite;
+}
+
+.floating-memory-image.anim-sideways {
+    animation: floatSideways 18s linear infinite;
+}
+
+.floating-memory-image.anim-pulse {
+    animation: pulse 8s ease-in-out infinite;
+}
+
+.floating-memory-image.anim-drift {
+    animation: drift 15s ease-in-out infinite;
+}
+
+/* Animation delays for natural timing */
+.delay-0 { animation-delay: 0s; }
+.delay-1 { animation-delay: 2s; }
+.delay-2 { animation-delay: 4s; }
+.delay-3 { animation-delay: 6s; }
+.delay-4 { animation-delay: 8s; }
+.delay-5 { animation-delay: 10s; }
+.delay-6 { animation-delay: 12s; }
+.delay-7 { animation-delay: 14s; }
+.delay-8 { animation-delay: 16s; }
+
+/* Ensure voting content stays above floating images */
+.user-container .user-header,
+.user-container .voting-container,
+.user-container .question-container {
+    position: relative;
+    z-index: 10;
+}
+
+/* Subtle particles for extra magic */
+.memory-particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.memory-particle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: linear-gradient(45deg, #6366f1, #8b5cf6);
+    border-radius: 50%;
+    opacity: 0.4;
+    animation: particleFloat 15s linear infinite;
+}
+
+@keyframes particleFloat {
+    0% {
+        transform: translateY(100vh) translateX(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.4;
+    }
+    90% {
+        opacity: 0.2;
+    }
+    100% {
+        transform: translateY(-10vh) translateX(30px);
+        opacity: 0;
+    }
+}
+
+.golden-particle {
+    background: linear-gradient(45deg, #f59e0b, #eab308);
+    width: 3px;
+    height: 3px;
+    animation: goldenFloat 12s linear infinite;
+}
+
+@keyframes goldenFloat {
+    0% {
+        transform: translateY(-10vh) rotate(0deg);
+        opacity: 0;
+    }
+    15% {
+        opacity: 0.6;
+    }
+    85% {
+        opacity: 0.3;
+    }
+    100% {
+        transform: translateY(110vh) rotate(180deg);
+        opacity: 0;
+    }
+}
+
+/* Reduce intensity on smaller screens */
+@media (max-width: 1200px) {
+    .floating-memory-image.size-xxl {
+        width: 400px;
+        height: 267px;
+    }
+    
+    .floating-memory-image.size-large {
+        width: 320px;
+        height: 213px;
+    }
+}
+
+@media (max-width: 768px) {
+    .floating-memories-background {
+        opacity: 0.5;
+    }
+    
+    .floating-memory-image.size-large,
+    .floating-memory-image.size-xl,
+    .floating-memory-image.size-xxl {
+        display: none;
+    }
+    
+    .floating-memory-image.size-medium {
+        width: 240px;
+        height: 160px;
+    }
+    
+    .floating-memory-image.size-small {
+        width: 180px;
+        height: 120px;
+    }
+}
+
+/* Hover effect - reduce background opacity when user interacts */
+.user-container:hover .floating-memories-background {
+    opacity: 0.4;
+    transition: opacity 0.3s ease;
+} 

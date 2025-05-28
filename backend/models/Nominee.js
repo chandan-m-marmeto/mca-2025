@@ -5,10 +5,6 @@ const nomineeSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  department: {
-    type: String,
-    required: true
-  },
   image: {
     type: String,
     default: 'default-avatar.png'

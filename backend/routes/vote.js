@@ -6,18 +6,32 @@ import User from '../models/User.js';
 
 const router = express.Router();
 
-// Get all active questions
+// Get all active questions (more flexible filtering)
 router.get('/questions', auth, async (req, res) => {
   try {
     const now = new Date();
+    
+    // Get questions that are active (less strict time filtering for demo)
     const questions = await Question.find({
-      isActive: true,
-      startTime: { $lte: now },
-      endTime: { $gte: now }
-    }).populate('nominees');
-    res.json(questions);
+      isActive: true
+      // Remove strict time filtering to show all active questions
+      // startTime: { $lte: now },
+      // endTime: { $gte: now }
+    }).populate('nominees').sort({ createdAt: -1 });
+    
+    console.log(`Found ${questions.length} active questions`);
+    
+    // Return in the format frontend expects
+    res.json({ 
+      success: true,
+      questions: questions 
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error loading questions:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 
@@ -27,16 +41,18 @@ router.post('/submit', auth, async (req, res) => {
     const { questionId, nomineeId } = req.body;
     const now = new Date();
 
-    // Check if question is active and within time limit
+    // Check if question exists and is active
     const question = await Question.findOne({
       _id: questionId,
-      isActive: true,
-      startTime: { $lte: now },
-      endTime: { $gte: now }
+      isActive: true
+      // Remove strict time checking for demo
     });
 
     if (!question) {
-      return res.status(400).json({ error: 'Voting is not active for this question' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Question not found or not active' 
+      });
     }
 
     // Check if user has already voted for this question
@@ -46,7 +62,10 @@ router.post('/submit', auth, async (req, res) => {
     });
 
     if (hasVoted) {
-      return res.status(400).json({ error: 'You have already voted for this question' });
+      return res.status(400).json({ 
+        success: false,
+        error: 'You have already voted for this question' 
+      });
     }
 
     // Update nominee votes
@@ -63,9 +82,16 @@ router.post('/submit', auth, async (req, res) => {
       }
     });
 
-    res.json({ message: 'Vote recorded successfully' });
+    res.json({ 
+      success: true,
+      message: 'Vote recorded successfully' 
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error submitting vote:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 });
 

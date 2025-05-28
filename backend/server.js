@@ -5,12 +5,21 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import http from 'http';
 import { Server } from 'socket.io';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import connectDatabase from './config/database.js';
+import analyticsRoutes from './routes/analytics.js';
+import { generateSessionId, trackAction } from './middleware/analytics.js';
+import session from 'express-session';
 
 // Import routes
 import authRoutes from './routes/auth.js';
 import voteRoutes from './routes/vote.js';
 import adminRoutes from './routes/admin.js';
+
+// Get current directory path for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Create Express app
 const app = express();
@@ -45,10 +54,13 @@ app.use(cors({
 
 app.use(express.json());
 
-// Rate limiting
+// Serve static files for uploaded images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Rate limiting - Only enable in production
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200, // limit each IP to 200 requests per windowMs
+    max: process.env.NODE_ENV === 'production' ? 200 : 10000, // High limit in dev
     message: {
         error: 'Too many requests from this IP, please try again later.'
     }
@@ -75,10 +87,31 @@ io.on('connection', (socket) => {
 // Make io available in routes
 app.set('io', io);
 
+// Session middleware for analytics
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'mca-analytics-secret',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false } // Set to true in production with HTTPS
+}));
+
+// Analytics session tracking
+app.use(generateSessionId);
+
+// Track page views (but not API routes to avoid spam)
+app.use((req, res, next) => {
+    if (!req.path.startsWith('/api/')) {
+        trackAction('page_view')(req, res, next);
+    } else {
+        next();
+    }
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/vote', voteRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health check route
 app.get('/health', (req, res) => {
