@@ -3,8 +3,8 @@ window.MCA = {
     currentUser: null,
     isAdmin: false,
     token: localStorage.getItem('token'),
-    baseURL: 'http://localhost:3000/api',
-    staticURL: 'http://localhost:3000',  // Add this for static files
+    baseURL: '',  // Will be set dynamically
+    staticURL: '',  // Will be set dynamically
     socket: null,
     // Admin state
     allQuestions: [],
@@ -20,8 +20,23 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeApp() {
     console.log('Initializing MCA App...');
     
-    // Set base URL
-    MCA.baseURL = 'http://localhost:3000/api';
+    // Set base URL dynamically based on environment
+    const isDevelopment = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1' ||
+                         window.location.port === '5173';
+    
+    if (isDevelopment) {
+        MCA.baseURL = 'http://localhost:3000/api';
+        MCA.staticURL = 'http://localhost:3000';
+    } else {
+        // Production - use same domain
+        MCA.baseURL = `${window.location.protocol}//${window.location.host}/api`;
+        MCA.staticURL = `${window.location.protocol}//${window.location.host}`;
+    }
+    
+    console.log('Environment:', isDevelopment ? 'Development' : 'Production');
+    console.log('Base URL set to:', MCA.baseURL);
+    console.log('Static URL set to:', MCA.staticURL);
     
     // Get token from localStorage
     MCA.token = localStorage.getItem('token');
@@ -465,7 +480,7 @@ function displayCurrentQuestion() {
                             });
                             
                             const imageUrl = nominee.image && nominee.image !== '/uploads/nominees/default-avatar.png' 
-                                ? `http://localhost:3000${nominee.image}` 
+                                ? `${MCA.staticURL}${nominee.image}` 
                                 : null;
                             
                             console.log(`Constructed URL for ${name}:`, imageUrl);
@@ -633,7 +648,7 @@ function showQuestionModal(questionData = null) {
                                     </label>
                                     <div class="image-preview">
                                         ${n.image && n.image !== '/uploads/nominees/default-avatar.png' ? 
-                                            `<img src="http://localhost:3000${n.image}" alt="Preview" class="preview-img">
+                                            `<img src="${MCA.staticURL}${n.image}" alt="Preview" class="preview-img">
                                              <button type="button" onclick="removeImage(this)" class="btn-remove-img">×</button>` : 
                                             '<span class="no-image">No image selected</span>'
                                         }

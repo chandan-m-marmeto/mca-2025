@@ -161,7 +161,7 @@ function displayCurrentUserQuestion() {
                             <div class="nominee-avatar">
                                 <img src="${getImageUrl(nominee.image)}" 
                                      alt="${nomineeName}" 
-                                     onerror="this.src='http://localhost:3000/uploads/nominees/default-avatar.png'">
+                                     onerror="this.src='${MCA.staticURL}/uploads/nominees/default-avatar.png'">
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
