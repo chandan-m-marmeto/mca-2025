@@ -5,7 +5,14 @@ import { validateEmail, validatePassword } from '../utils/validators.js';
 // Register new user
 export const register = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { name, email, password } = req.body;
+
+        // Validate required fields
+        if (!name || !email || !password) {
+            return res.status(400).json({ 
+                error: 'Name, email, and password are required' 
+            });
+        }
 
         // Validate email
         if (!validateEmail(email)) {
@@ -31,6 +38,7 @@ export const register = async (req, res) => {
 
         // Create new user
         const user = new User({
+            name,
             email,
             password
         });
@@ -47,6 +55,7 @@ export const register = async (req, res) => {
         res.status(201).json({
             user: {
                 id: user._id,
+                name: user.name,
                 email: user.email,
                 isAdmin: user.isAdmin
             },
@@ -97,6 +106,7 @@ export const login = async (req, res) => {
         res.json({
             user: {
                 id: user._id,
+                name: user.name,
                 email: user.email,
                 isAdmin: user.isAdmin
             },
@@ -116,6 +126,7 @@ export const getCurrentUser = async (req, res) => {
         res.json({
             user: {
                 id: user._id,
+                name: user.name,
                 email: user.email,
                 isAdmin: user.isAdmin
             }
