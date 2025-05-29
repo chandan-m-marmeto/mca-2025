@@ -12,40 +12,89 @@ class UserBackground {
 
     // Automatically load all images from the MCA folder
     async loadAvailableImages() {
-        // Default images that should work if you put ANY photos in /assets/images/mca/
-        const possibleImages = [
-            // You can put ANY photo names here, or I'll auto-detect them
-            'photo1.jpg', 'photo2.jpg', 'photo3.jpg', 'photo4.jpg', 'photo5.jpg',
-            'image1.jpg', 'image2.jpg', 'image3.jpg', 'image4.jpg', 'image5.jpg',
-            'mca1.jpg', 'mca2.jpg', 'mca3.jpg', 'mca4.jpg', 'mca5.jpg',
-            'award1.jpg', 'award2.jpg', 'award3.jpg', 'award4.jpg', 'award5.jpg',
-            'ceremony1.jpg', 'ceremony2.jpg', 'ceremony3.jpg', 'team1.jpg', 'team2.jpg',
-            'winner1.jpg', 'winner2.jpg', 'celebration1.jpg', 'celebration2.jpg',
-            // Add more generic names or specific ones if you know them
-            '2024.jpg', '2023.jpg', '2022.jpg', '2021.jpg', '2020.jpg',
-            'group.jpg', 'trophy.jpg', 'winners.jpg', 'ceremony.jpg', 'awards.jpg'
-        ];
-
-        // Test which images actually exist
-        this.memoryImages = [];
+        // Generate comprehensive list based on your actual camera naming patterns
+        const possibleImages = [];
         
-        for (let imageName of possibleImages) {
-            const imagePath = `/assets/images/mca/${imageName}`;
-            
-            // Test if image exists
-            if (await this.imageExists(imagePath)) {
-                this.memoryImages.push(imagePath);
+        // Pattern 1: Canon camera images (_MG_XXXX.JPG)
+        for (let i = 5000; i <= 9999; i++) {
+            possibleImages.push(`_MG_${i}.JPG`);
+            possibleImages.push(`_MG_${i}.jpg`);
+        }
+        
+        // Pattern 2: DSC camera images (DSC_XXXX.JPG)  
+        for (let i = 5000; i <= 9999; i++) {
+            possibleImages.push(`DSC_${i}.JPG`);
+            possibleImages.push(`DSC_${i}.jpg`);
+        }
+        
+        // Pattern 3: IMG camera images (IMG_XXXX.JPG)
+        for (let i = 0; i <= 9999; i++) {
+            const paddedNum = i.toString().padStart(4, '0');
+            possibleImages.push(`IMG_${paddedNum}.JPG`);
+            possibleImages.push(`IMG_${paddedNum}.jpg`);
+        }
+        
+        // Pattern 4: Other common camera patterns
+        const cameraPrefixes = ['DSC', '_MG', 'IMG', 'P', 'DSCF', 'DSCN'];
+        for (let prefix of cameraPrefixes) {
+            for (let i = 1000; i <= 9999; i++) {
+                possibleImages.push(`${prefix}_${i}.JPG`);
+                possibleImages.push(`${prefix}_${i}.jpg`);
+                possibleImages.push(`${prefix}${i}.JPG`);
+                possibleImages.push(`${prefix}${i}.jpg`);
             }
         }
-
+        
+        // Pattern 5: Your specific filenames we can see
+        const knownImages = [
+            'DSC_7488.JPG', '_MG_7623.JPG', '_MG_7764.JPG', 
+            '_MG_7833.JPG', '_MG_7855.JPG', '_MG_7864.JPG'
+        ];
+        possibleImages.push(...knownImages);
+        
+        console.log(`🔍 Testing ${possibleImages.length} camera image patterns...`);
+        
+        // Test which images actually exist
+        this.memoryImages = [];
+        let foundCount = 0;
+        
+        // Test in smaller batches to avoid overwhelming the browser
+        const batchSize = 50;
+        for (let i = 0; i < possibleImages.length; i += batchSize) {
+            const batch = possibleImages.slice(i, i + batchSize);
+            
+            const promises = batch.map(async (imageName) => {
+                const imagePath = `/assets/images/mca/${imageName}`;
+                if (await this.imageExists(imagePath)) {
+                    this.memoryImages.push(imagePath);
+                    foundCount++;
+                    console.log(`✅ Found camera image: ${imageName}`);
+                    return imagePath;
+                }
+                return null;
+            });
+            
+            await Promise.all(promises);
+            
+            // Progress indicator
+            if (i % 500 === 0) {
+                console.log(`🔍 Checked ${i}/${possibleImages.length} patterns... Found ${foundCount} images so far`);
+            }
+            
+            // Small delay to prevent browser freezing
+            if (i + batchSize < possibleImages.length) {
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+        }
+        
         // If no images found, use placeholder
         if (this.memoryImages.length === 0) {
-            console.log('🎨 No MCA photos found, using placeholders');
+            console.log('🎨 No camera images found, using placeholders');
             this.memoryImages = [this.createPlaceholderImage()];
         } else {
-            console.log(`🎨 Found ${this.memoryImages.length} MCA photos:`, this.memoryImages);
+            console.log(`🎨 SUCCESS! Found ${foundCount} camera images:`, this.memoryImages);
         }
-
+        
         // Start animations after loading images
         this.init();
     }
