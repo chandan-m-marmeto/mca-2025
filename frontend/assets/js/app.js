@@ -1021,11 +1021,11 @@ function showResultsModal(question) {
                     </div>
                     <div class="stat-card">
                         <div class="stat-number">${avgVotesPerNominee}</div>
-                        <div class="stat-label">Avg Votes/Nominee</div>
+                        <div class="stat-label">Average</div>
                     </div>
                     <div class="stat-card highlight">
                         <div class="stat-number">🏆</div>
-                        <div class="stat-label">Leader: ${winner?.name || 'No votes yet'}</div>
+                        <div class="stat-label">Leader:<br>${winner?.name || 'No votes yet'}</div>
                     </div>
                 </div>
 

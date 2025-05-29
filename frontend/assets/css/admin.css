@@ -408,29 +408,41 @@
 .results-stats .stat-card {
     background: rgba(255, 255, 255, 0.1) !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    padding: 1.5rem !important;
+    padding: 1.2rem !important;
     text-align: center !important;
     border-radius: 12px !important;
-    min-height: 100px !important;
+    min-height: 90px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
 }
 
 .results-stats .stat-number {
-    font-size: 2rem !important;
+    font-size: 1.8rem !important;
     font-weight: 700 !important;
     color: #fff !important;
-    margin-bottom: 0.5rem !important;
-    display: block !important;
+    margin-bottom: 0.3rem !important;
+    line-height: 1 !important;
 }
 
 .results-stats .stat-label {
     color: rgba(255, 255, 255, 0.8) !important;
-    font-size: 0.9rem !important;
-    display: block !important;
+    font-size: 0.85rem !important;
+    line-height: 1.2 !important;
+    font-weight: 500 !important;
 }
 
 .results-stats .stat-card.highlight {
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3)) !important;
     border-color: rgba(99, 102, 241, 0.5) !important;
+}
+
+.results-stats .stat-card.highlight .stat-number {
+    font-size: 1.5rem !important;
+}
+
+.results-stats .stat-card.highlight .stat-label {
+    font-size: 0.8rem !important;
 }
 
 /* Detailed Results */
