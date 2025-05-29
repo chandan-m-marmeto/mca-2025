@@ -32,12 +32,16 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Configure multer
+// Configure multer - increased limits significantly
 const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
+        fileSize: 20 * 1024 * 1024, // 20MB limit per file
+        files: 50, // Max 50 files per request
+        fieldSize: 10 * 1024 * 1024, // 10MB for field data
+        fieldNameSize: 1000, // Max field name size
+        fields: 100 // Max number of fields
     }
 });
 

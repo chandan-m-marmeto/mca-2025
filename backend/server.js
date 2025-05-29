@@ -25,6 +25,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
+// Trust proxy for nginx
+app.set('trust proxy', 1);
+
 // Frontend URL
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -52,18 +55,23 @@ app.use(cors({
     credentials: true
 }));
 
-app.use(express.json());
+// Increase request size limits for file uploads (BEFORE routes)
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 // Serve static files for uploaded images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Rate limiting - Only enable in production
+// Rate limiting - Fixed configuration
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: process.env.NODE_ENV === 'production' ? 200 : 10000, // High limit in dev
+    max: process.env.NODE_ENV === 'production' ? 200 : 10000,
     message: {
         error: 'Too many requests from this IP, please try again later.'
-    }
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    trustProxy: true // Add this for nginx
 });
 app.use('/api/', limiter);
 
@@ -122,19 +130,37 @@ app.get('/health', (req, res) => {
 app.use((err, req, res, next) => {
     console.error('Error:', err);
     
+    // Handle Multer errors (file upload errors)
+    if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+            success: false,
+            error: 'File too large. Maximum size is 20MB per file.'
+        });
+    }
+    
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({
+            success: false,
+            error: 'Too many files uploaded or invalid field name.'
+        });
+    }
+    
     if (err.name === 'ValidationError') {
         return res.status(400).json({
+            success: false,
             error: err.message
         });
     }
 
     if (err.name === 'UnauthorizedError') {
         return res.status(401).json({
+            success: false,
             error: 'Invalid token'
         });
     }
 
     res.status(500).json({
+        success: false,
         error: 'Something went wrong!'
     });
 });
@@ -142,6 +168,7 @@ app.use((err, req, res, next) => {
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({
+        success: false,
         error: 'Route not found'
     });
 });
