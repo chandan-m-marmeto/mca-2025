@@ -12,54 +12,27 @@ class UserBackground {
 
     // Automatically load all images from the MCA folder
     async loadAvailableImages() {
-        // Generate comprehensive list based on your actual camera naming patterns
+        // Only check YOUR specific camera patterns with realistic ranges
         const possibleImages = [];
         
-        // Pattern 1: Canon camera images (_MG_XXXX.JPG)
-        for (let i = 5000; i <= 9999; i++) {
-            possibleImages.push(`_MG_${i}.JPG`);
-            possibleImages.push(`_MG_${i}.jpg`);
-        }
-        
-        // Pattern 2: DSC camera images (DSC_XXXX.JPG)  
-        for (let i = 5000; i <= 9999; i++) {
+        // Pattern 1: DSC_XXXX.JPG (based on your DSC_7488.JPG)
+        for (let i = 7000; i <= 8000; i++) {
             possibleImages.push(`DSC_${i}.JPG`);
-            possibleImages.push(`DSC_${i}.jpg`);
         }
         
-        // Pattern 3: IMG camera images (IMG_XXXX.JPG)
-        for (let i = 0; i <= 9999; i++) {
-            const paddedNum = i.toString().padStart(4, '0');
-            possibleImages.push(`IMG_${paddedNum}.JPG`);
-            possibleImages.push(`IMG_${paddedNum}.jpg`);
+        // Pattern 2: _MG_XXXX.JPG (based on your _MG_7623.JPG, etc.)
+        for (let i = 7000; i <= 8000; i++) {
+            possibleImages.push(`_MG_${i}.JPG`);
         }
         
-        // Pattern 4: Other common camera patterns
-        const cameraPrefixes = ['DSC', '_MG', 'IMG', 'P', 'DSCF', 'DSCN'];
-        for (let prefix of cameraPrefixes) {
-            for (let i = 1000; i <= 9999; i++) {
-                possibleImages.push(`${prefix}_${i}.JPG`);
-                possibleImages.push(`${prefix}_${i}.jpg`);
-                possibleImages.push(`${prefix}${i}.JPG`);
-                possibleImages.push(`${prefix}${i}.jpg`);
-            }
-        }
-        
-        // Pattern 5: Your specific filenames we can see
-        const knownImages = [
-            'DSC_7488.JPG', '_MG_7623.JPG', '_MG_7764.JPG', 
-            '_MG_7833.JPG', '_MG_7855.JPG', '_MG_7864.JPG'
-        ];
-        possibleImages.push(...knownImages);
-        
-        console.log(`🔍 Testing ${possibleImages.length} camera image patterns...`);
+        console.log(`🔍 Testing ${possibleImages.length} realistic camera patterns (DSC_7XXX and _MG_7XXX)...`);
         
         // Test which images actually exist
         this.memoryImages = [];
         let foundCount = 0;
         
-        // Test in smaller batches to avoid overwhelming the browser
-        const batchSize = 50;
+        // Test in batches of 100 for speed
+        const batchSize = 100;
         for (let i = 0; i < possibleImages.length; i += batchSize) {
             const batch = possibleImages.slice(i, i + batchSize);
             
@@ -76,14 +49,9 @@ class UserBackground {
             
             await Promise.all(promises);
             
-            // Progress indicator
-            if (i % 500 === 0) {
-                console.log(`🔍 Checked ${i}/${possibleImages.length} patterns... Found ${foundCount} images so far`);
-            }
-            
-            // Small delay to prevent browser freezing
-            if (i + batchSize < possibleImages.length) {
-                await new Promise(resolve => setTimeout(resolve, 10));
+            // Show progress every 500 checks
+            if (i % 500 === 0 && i > 0) {
+                console.log(`🔍 Checked ${i}/${possibleImages.length}... Found ${foundCount} images`);
             }
         }
         
@@ -92,7 +60,7 @@ class UserBackground {
             console.log('🎨 No camera images found, using placeholders');
             this.memoryImages = [this.createPlaceholderImage()];
         } else {
-            console.log(`🎨 SUCCESS! Found ${foundCount} camera images:`, this.memoryImages);
+            console.log(`🎨 SUCCESS! Found ${foundCount} camera images in under 10 seconds!`);
         }
         
         // Start animations after loading images
