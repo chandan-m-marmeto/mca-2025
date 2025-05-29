@@ -911,6 +911,14 @@ function showResultsModal(question) {
     const winner = sortedNominees[0];
     const avgVotesPerNominee = totalVotes > 0 ? (totalVotes / safeQuestion.nominees.length).toFixed(1) : 0;
 
+    // Helper function to get image URL with fallback
+    const getImageUrl = (imagePath) => {
+        if (!imagePath || imagePath === '/uploads/nominees/default-avatar.png') {
+            return `${MCA.staticURL}/uploads/nominees/default-avatar.png`;
+        }
+        return `${MCA.staticURL}${imagePath}`;
+    };
+
     // Get status info
     const getStatusInfo = (status, isActive) => {
         if (!isActive) return { text: 'INACTIVE', class: 'inactive', icon: '🔴' };
@@ -970,6 +978,37 @@ function showResultsModal(question) {
                     </div>
                 </div>
 
+                <!-- Nominees Overview Cards -->
+                <div class="nominees-overview">
+                    <h3>👥 Nominees (${safeQuestion.nominees.length})</h3>
+                    <div class="nominees-grid">
+                        ${sortedNominees.map((nominee, index) => {
+                            const votes = parseInt(nominee.votes) || 0;
+                            const percentage = totalVotes > 0 ? ((votes / totalVotes) * 100).toFixed(1) : 0;
+                            const isWinner = index === 0 && votes > 0;
+                            
+                            return `
+                                <div class="nominee-card ${isWinner ? 'winner-card' : ''}">
+                                    <div class="nominee-avatar">
+                                        <img src="${getImageUrl(nominee.image)}" 
+                                             alt="${nominee.name || 'Unknown'}"
+                                             onerror="this.src='${MCA.staticURL}/uploads/nominees/default-avatar.png'">
+                                        ${isWinner ? '<div class="winner-crown">👑</div>' : ''}
+                                    </div>
+                                    <div class="nominee-info">
+                                        <h4>${nominee.name || 'Unknown'}</h4>
+                                        <div class="nominee-rank">#${index + 1}</div>
+                                    </div>
+                                    <div class="nominee-stats">
+                                        <div class="vote-count">${votes}</div>
+                                        <div class="vote-label">votes</div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
                 <!-- Statistics Summary -->
                 <div class="results-stats">
                     <div class="stat-card">
@@ -1004,6 +1043,11 @@ function showResultsModal(question) {
                                 <div class="nominee-result ${isWinner ? 'winner' : ''}">
                                     <div class="nominee-rank">
                                         ${isWinner ? '🏆' : `#${index + 1}`}
+                                    </div>
+                                    <div class="nominee-avatar-small">
+                                        <img src="${getImageUrl(nominee.image)}" 
+                                             alt="${name}"
+                                             onerror="this.src='${MCA.staticURL}/uploads/nominees/default-avatar.png'">
                                     </div>
                                     <div class="nominee-details">
                                         <h4 class="nominee-name">
@@ -1041,6 +1085,11 @@ function showResultsModal(question) {
                                 return `
                                     <div class="legend-item">
                                         <div class="legend-color" style="background-color: ${color}"></div>
+                                        <div class="legend-avatar">
+                                            <img src="${getImageUrl(nominee.image)}" 
+                                                 alt="${nominee.name}"
+                                                 onerror="this.src='${MCA.staticURL}/uploads/nominees/default-avatar.png'">
+                                        </div>
                                         <span class="legend-text">${nominee.name}: ${votes} (${percentage}%)</span>
                                     </div>
                                 `;
