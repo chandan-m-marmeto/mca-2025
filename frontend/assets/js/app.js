@@ -815,6 +815,7 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
         // Collect nominee names efficiently
         const nomineeInputs = document.querySelectorAll('#nomineesContainer .nominee-input');
         const nominees = [];
+        const imageFiles = [];
         
         for (let i = 0; i < nomineeInputs.length; i++) {
             const input = nomineeInputs[i];
@@ -824,6 +825,23 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
                     name: nameInput.value.trim(),
                     index: i
                 });
+
+                // Collect image files separately
+                const fileInput = input.querySelector('input[type="file"]');
+                if (fileInput && fileInput.files[0]) {
+                    const file = fileInput.files[0];
+                    
+                    // Validate file size (10MB limit)
+                    if (file.size > 10 * 1024 * 1024) {
+                        throw new Error(`Image ${file.name} is too large. Maximum size is 10MB.`);
+                    }
+                    
+                    imageFiles.push({
+                        file: file,
+                        nomineeIndex: i,
+                        nomineeName: nameInput.value.trim()
+                    });
+                }
             }
         }
 
@@ -831,51 +849,22 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
             throw new Error('At least 2 nominees are required');
         }
 
-        // Prepare FormData efficiently
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('description', description);
-        formData.append('duration', duration);
-        formData.append('nominees', JSON.stringify(nominees));
-
-        // Add image files efficiently
-        let hasImages = false;
-        let imageCount = 0;
-        for (let i = 0; i < nomineeInputs.length; i++) {
-            const input = nomineeInputs[i];
-            const fileInput = input.querySelector('input[type="file"]');
-            if (fileInput && fileInput.files[0]) {
-                const file = fileInput.files[0];
-                
-                // Validate file size (10MB limit)
-                if (file.size > 10 * 1024 * 1024) {
-                    throw new Error(`Image ${file.name} is too large. Maximum size is 10MB.`);
-                }
-                
-                formData.append(`nominee_${i}_image`, file);
-                hasImages = true;
-                imageCount++;
-            }
-        }
-
-        // Update button to show progress
-        submitButton.innerHTML = hasImages ? 
-            `📸 Creating with ${imageCount} image(s)...` : 
-            '✅ Creating question...';
+        // STEP 1: Create question WITHOUT images (INSTANT!)
+        submitButton.innerHTML = '✅ Creating question...';
         
+        const questionData = {
+            title,
+            description,
+            duration,
+            nominees: nominees.map(n => ({ name: n.name })) // Just names, no images
+        };
+
         const url = isEdit ? 
             `${MCA.baseURL}/admin/questions/${questionId}` : 
             `${MCA.baseURL}/admin/questions`;
         const method = isEdit ? 'PUT' : 'POST';
         
-        console.log('Making request:', {
-            url,
-            method,
-            hasImages,
-            imageCount,
-            baseURL: MCA.baseURL,
-            token: !!localStorage.getItem('token')
-        });
+        console.log('Creating question without images:', questionData);
 
         // Check if token exists
         const token = localStorage.getItem('token');
@@ -883,15 +872,17 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
             throw new Error('No authentication token found. Please login again.');
         }
         
+        // Create question with JSON (FAST!)
         const response = await fetch(url, {
             method: method,
             headers: {
+                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: formData
+            body: JSON.stringify(questionData)
         });
 
-        console.log('Response received:', {
+        console.log('Question creation response:', {
             status: response.status,
             statusText: response.statusText,
             ok: response.ok
@@ -910,14 +901,16 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
         }
 
         const data = await response.json();
-        console.log('Response data:', data);
+        console.log('Question created successfully:', data);
 
         if (data.success) {
             // Show success immediately
             submitButton.innerHTML = '🎉 Success!';
             
+            // Show immediate success message
+            const hasImages = imageFiles.length > 0;
             const message = hasImages ? 
-                `${isEdit ? 'Question updated!' : 'Question created!'} ${imageCount} image(s) are processing in the background.` :
+                `${isEdit ? 'Question updated!' : 'Question created!'} ${imageFiles.length} image(s) will upload in background.` :
                 `${isEdit ? 'Question updated!' : 'Question created!'} successfully!`;
             
             showToast(message, 'success');
@@ -925,8 +918,13 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
             // Close modal immediately
             closeQuestionModal();
             
-            // Refresh questions list - no loading spinner
+            // Refresh questions list immediately - show question with CSS avatars
             loadAdminQuestions();
+
+            // STEP 2: Upload images in background (AFTER question is created and shown)
+            if (hasImages && data.data && data.data.nominees) {
+                uploadImagesInBackground(data.data, imageFiles);
+            }
         } else {
             throw new Error(data.error || 'Operation failed');
         }
@@ -948,6 +946,61 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
         // Restore button on error
         submitButton.innerHTML = originalText;
         submitButton.disabled = false;
+    }
+}
+
+// New function to upload images in background
+async function uploadImagesInBackground(questionData, imageFiles) {
+    console.log(`🖼️ Starting background upload of ${imageFiles.length} images...`);
+    
+    try {
+        // Upload each image separately
+        for (const imageData of imageFiles) {
+            const { file, nomineeIndex, nomineeName } = imageData;
+            
+            // Find the corresponding nominee in the created question
+            const nominee = questionData.nominees.find(n => 
+                n.name.toLowerCase().trim() === nomineeName.toLowerCase().trim()
+            );
+            
+            if (!nominee) {
+                console.error(`Nominee not found for image: ${nomineeName}`);
+                continue;
+            }
+
+            console.log(`📤 Uploading image for nominee: ${nomineeName}`);
+            
+            // Create FormData for this single image
+            const formData = new FormData();
+            formData.append('nomineeId', nominee._id);
+            formData.append('questionId', questionData._id);
+            formData.append('image', file);
+            
+            // Upload in background (don't wait for response)
+            fetch(`${MCA.baseURL}/admin/nominees/${nominee._id}/image`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: formData
+            }).then(response => {
+                if (response.ok) {
+                    console.log(`✅ Image uploaded successfully for ${nomineeName}`);
+                    // Refresh the questions list to show updated image
+                    loadAdminQuestions();
+                } else {
+                    console.error(`❌ Image upload failed for ${nomineeName}:`, response.status);
+                }
+            }).catch(error => {
+                console.error(`❌ Image upload error for ${nomineeName}:`, error);
+            });
+        }
+        
+        showToast(`Background upload started for ${imageFiles.length} image(s)`, 'info');
+        
+    } catch (error) {
+        console.error('Background image upload error:', error);
+        showToast('Some images may not upload properly', 'warning');
     }
 }
 

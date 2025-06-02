@@ -37,17 +37,25 @@ const deleteFile = (filePath) => {
     }
 };
 
-// Create a new question with instant response and true async image processing
+// Create a new question with instant response (NO FILES)
 export const createQuestion = async (req, res) => {
     try {
         const { title, description, nominees, duration } = req.body;
-        const uploadedFiles = req.files || [];
 
-        // Parse nominees if it's a string
+        // This endpoint now only handles JSON data, no files
         let parsedNominees;
-        try {
-            parsedNominees = typeof nominees === 'string' ? JSON.parse(nominees) : nominees;
-        } catch (error) {
+        if (Array.isArray(nominees)) {
+            parsedNominees = nominees;
+        } else if (typeof nominees === 'string') {
+            try {
+                parsedNominees = JSON.parse(nominees);
+            } catch (error) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid nominees format'
+                });
+            }
+        } else {
             return res.status(400).json({
                 success: false,
                 error: 'Invalid nominees format'
@@ -66,7 +74,7 @@ export const createQuestion = async (req, res) => {
         const startTime = new Date();
         const endTime = new Date(startTime.getTime() + (duration * 60 * 60 * 1000));
 
-        // Create all nominees first (single batch operation)
+        // Create all nominees (single batch operation) - ALL with null images
         const nomineeDataArray = parsedNominees.map(nominee => ({
             name: nominee.name.trim(),
             votes: 0,
@@ -86,7 +94,7 @@ export const createQuestion = async (req, res) => {
             isActive: true
         }).save();
 
-        // RESPOND IMMEDIATELY - Don't wait for population or anything else!
+        // RESPOND IMMEDIATELY with complete data
         const responseData = {
             _id: question._id,
             title,
@@ -103,43 +111,17 @@ export const createQuestion = async (req, res) => {
             }))
         };
 
+        console.log(`✅ Question created instantly: ${title}`);
+
         res.status(201).json({
             success: true,
             data: responseData,
-            message: uploadedFiles.length > 0 
-                ? `Question created! ${uploadedFiles.length} image(s) will be processed in the background.`
-                : 'Question created successfully!'
+            message: 'Question created successfully!'
         });
-
-        // NOW process images AFTER sending response (fire and forget)
-        if (uploadedFiles.length > 0) {
-            // Process images in the background - AFTER response is sent
-            setImmediate(() => {
-                uploadedFiles.forEach((imageFile, index) => {
-                    if (imageFile.fieldname === `nominee_${index}_image` && createdNominees[index]) {
-                        // Start processing this image
-                        processImageInBackground(
-                            createdNominees[index]._id,
-                            question._id,
-                            imageFile.path,
-                            imageFile.originalname
-                        );
-                        console.log(`🎯 Queued image processing for nominee: ${parsedNominees[index].name}`);
-                    }
-                });
-            });
-        }
 
     } catch (error) {
         console.error('Create question error:', error);
         
-        // Clean up uploaded files on error
-        if (req.files) {
-            req.files.forEach(file => {
-                deleteFile(file.path);
-            });
-        }
-
         res.status(500).json({
             success: false,
             error: error.message
@@ -521,4 +503,56 @@ const getQuestionStatus = (question) => {
     if (now < start) return 'scheduled';
     if (now > end) return 'expired';
     return 'active';
+};
+
+// New endpoint for uploading individual nominee images
+export const uploadNomineeImage = async (req, res) => {
+    try {
+        const { nomineeId } = req.params;
+        const { questionId } = req.body;
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                error: 'No image file provided'
+            });
+        }
+
+        // Verify nominee exists
+        const nominee = await Nominee.findById(nomineeId);
+        if (!nominee) {
+            return res.status(404).json({
+                success: false,
+                error: 'Nominee not found'
+            });
+        }
+
+        // Start background processing immediately
+        processImageInBackground(
+            nomineeId,
+            questionId,
+            req.file.path,
+            req.file.originalname
+        );
+
+        console.log(`🖼️ Image upload queued for nominee: ${nominee.name}`);
+
+        res.json({
+            success: true,
+            message: 'Image upload started in background'
+        });
+
+    } catch (error) {
+        console.error('Upload nominee image error:', error);
+        
+        // Clean up uploaded file on error
+        if (req.file) {
+            deleteFile(req.file.path);
+        }
+
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
 };
