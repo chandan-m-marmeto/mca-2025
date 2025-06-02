@@ -8,6 +8,24 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Ensure upload directories exist
+const ensureDirectories = () => {
+    const directories = ['uploads', 'uploads/temp', 'uploads/nominees'];
+    directories.forEach(dir => {
+        try {
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true, mode: 0o755 });
+                console.log(`📁 Created upload directory: ${dir}`);
+            }
+        } catch (error) {
+            console.error(`❌ Error creating directory ${dir}:`, error);
+        }
+    });
+};
+
+// Initialize directories
+ensureDirectories();
+
 // Helper function to delete file
 const deleteFile = (filePath) => {
     try {
@@ -26,11 +44,25 @@ const processImageAsync = async (nomineeId, questionId, tempFilePath, originalNa
         try {
             console.log(`Processing image for nominee ${nomineeId}...`);
             
+            // Ensure the final directory exists
+            const finalDir = path.join(process.cwd(), 'uploads', 'nominees');
+            if (!fs.existsSync(finalDir)) {
+                fs.mkdirSync(finalDir, { recursive: true, mode: 0o755 });
+                console.log(`📁 Created final directory: ${finalDir}`);
+            }
+            
             // Generate unique filename
             const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
             const fileExtension = path.extname(originalName);
             const finalFilename = `nominee-${uniqueSuffix}${fileExtension}`;
-            const finalPath = path.join(process.cwd(), 'uploads', 'nominees', finalFilename);
+            const finalPath = path.join(finalDir, finalFilename);
+            
+            // Verify temp file exists before processing
+            if (!fs.existsSync(tempFilePath)) {
+                console.error(`❌ Temp file not found: ${tempFilePath}`);
+                await Nominee.findByIdAndUpdate(nomineeId, { imageProcessed: true });
+                return;
+            }
             
             // Process image with sharp
             await sharp(tempFilePath)
@@ -49,9 +81,10 @@ const processImageAsync = async (nomineeId, questionId, tempFilePath, originalNa
                 imageProcessed: true
             });
             
-            // Clean up temp file
+            // Clean up temp file AFTER processing is complete
             if (fs.existsSync(tempFilePath)) {
                 fs.unlinkSync(tempFilePath);
+                console.log(`🧹 Cleaned up temp file: ${tempFilePath}`);
             }
             
             console.log(`✅ Image processed successfully for nominee ${nomineeId}`);
@@ -73,12 +106,13 @@ const processImageAsync = async (nomineeId, questionId, tempFilePath, originalNa
                 imageProcessed: true
             });
             
-            // Clean up temp file
+            // Clean up temp file on error too
             if (fs.existsSync(tempFilePath)) {
                 fs.unlinkSync(tempFilePath);
+                console.log(`🧹 Cleaned up temp file after error: ${tempFilePath}`);
             }
         }
-    }, 100); // Process after 100ms delay
+    }, 500); // Increase delay to 500ms to ensure temp file is written
 };
 
 // Create a new question with simple async image processing

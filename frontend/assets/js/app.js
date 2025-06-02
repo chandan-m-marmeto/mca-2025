@@ -352,7 +352,11 @@ function logout() {
 async function loadAdminQuestions() {
     try {
         console.log('Loading admin questions...');
-        showLoading();
+        // Only show loading on initial load, not on refreshes
+        const isInitialLoad = !MCA.allQuestions || MCA.allQuestions.length === 0;
+        if (isInitialLoad) {
+            showLoading();
+        }
         
         // Fix: Use full URL
         const response = await fetch(`${MCA.baseURL}/admin/results`, {
@@ -379,10 +383,14 @@ async function loadAdminQuestions() {
 
     } catch (error) {
         console.error('Failed to load questions:', error);
-        showToast('Failed to load questions', 'error');
+        if (isInitialLoad) {
+            showToast('Failed to load questions', 'error');
+        }
         displayEmptyState();
     } finally {
-        hideLoading();
+        if (isInitialLoad) {
+            hideLoading();
+        }
     }
 }
 
@@ -816,15 +824,17 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
     formData.append('nominees', JSON.stringify(nominees));
 
     // Add image files
+    let hasImages = false;
     nomineeInputs.forEach((input, index) => {
         const fileInput = input.querySelector('input[type="file"]');
         if (fileInput && fileInput.files[0]) {
             formData.append(`nominee_${index}_image`, fileInput.files[0]);
+            hasImages = true;
         }
     });
 
     try {
-        showLoading();
+        // NO LOADING INDICATOR - Make it instant!
         
         // Fix: Use full URL
         const url = isEdit ? 
@@ -846,8 +856,14 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
         const data = await response.json();
 
         if (data.success) {
-            showToast(isEdit ? 'Question updated successfully!' : 'Question created successfully!', 'success');
+            const message = hasImages ? 
+                `${isEdit ? 'Question updated!' : 'Question created!'} Images are processing in the background.` :
+                `${isEdit ? 'Question updated!' : 'Question created!'} successfully!`;
+            
+            showToast(message, 'success');
             closeQuestionModal();
+            
+            // Refresh questions list immediately - no loading
             await loadAdminQuestions();
         } else {
             showToast(data.error || 'Operation failed', 'error');
@@ -856,9 +872,8 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
     } catch (error) {
         console.error('Question submit error:', error);
         showToast('Network error occurred', 'error');
-    } finally {
-        hideLoading();
     }
+    // NO hideLoading() call - we never showed loading!
 }
 
 // CRUD functions

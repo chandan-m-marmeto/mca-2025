@@ -1,5 +1,5 @@
 import express from 'express';
-import tempUpload, { autoCleanupTempFiles } from '../middleware/tempUpload.js';
+import tempUpload from '../middleware/tempUpload.js';
 import { 
     createQuestion, 
     updateQuestion, 
@@ -16,11 +16,11 @@ const router = express.Router();
 router.use(authenticateToken);
 router.use(isAdmin);
 
-// Admin routes with file upload support - use tempUpload for async processing
-router.post('/questions', tempUpload.any(), autoCleanupTempFiles, createQuestion);
+// Admin routes with file upload support - removed autoCleanupTempFiles
+router.post('/questions', tempUpload.any(), createQuestion);
 router.get('/results', getResults);
 router.get('/statistics', getStatistics);
-router.put('/questions/:id', tempUpload.any(), autoCleanupTempFiles, updateQuestion);
+router.put('/questions/:id', tempUpload.any(), updateQuestion);
 router.patch('/questions/:id/status', updateQuestionStatus);
 router.delete('/questions/:id', deleteQuestion);
 
