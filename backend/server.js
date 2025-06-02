@@ -8,8 +8,6 @@ import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import connectDatabase from './config/database.js';
-import redis from './config/redis.js';
-import imageQueue, { cleanupOldJobs } from './queues/imageQueue.js';
 import analyticsRoutes from './routes/analytics.js';
 import { generateSessionId, trackAction } from './middleware/analytics.js';
 import session from 'express-session';
@@ -78,12 +76,6 @@ app.use('/api/', limiter);
 
 // Connect to MongoDB
 connectDatabase();
-
-// Initialize Redis connection
-redis.connect().catch(console.error);
-
-// Clean up old queue jobs on startup
-setTimeout(cleanupOldJobs, 5000);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
@@ -189,14 +181,6 @@ process.on('SIGTERM', async () => {
     console.log('SIGTERM received, shutting down gracefully...');
     
     try {
-        // Close image queue
-        await imageQueue.close();
-        console.log('✅ Image queue closed');
-        
-        // Close Redis connection
-        redis.disconnect();
-        console.log('✅ Redis disconnected');
-        
         // Close server
         server.close(() => {
             console.log('✅ Server closed');

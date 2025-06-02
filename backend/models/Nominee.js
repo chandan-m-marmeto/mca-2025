@@ -16,14 +16,6 @@ const nomineeSchema = new mongoose.Schema({
   imageProcessed: {
     type: Boolean,
     default: true // Default true for nominees without uploaded images
-  },
-  tempImagePath: {
-    type: String,
-    default: null // Stores temporary file path while processing
-  },
-  imageJobId: {
-    type: String,
-    default: null // Stores queue job ID for tracking
   }
 }, {
   timestamps: true
