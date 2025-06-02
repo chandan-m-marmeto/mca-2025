@@ -795,82 +795,98 @@ function removeNomineeInput(button) {
 async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
     e.preventDefault();
 
-    const formData = new FormData();
+    // Show INSTANT feedback FIRST - before any processing
+    const submitButton = e.target.querySelector('button[type="submit"]');
+    const originalText = submitButton.innerHTML;
+    submitButton.innerHTML = '⚡ Creating...';
+    submitButton.disabled = true;
+
+    // Prepare form data quickly
     const title = document.getElementById('questionTitle').value.trim();
     const description = document.getElementById('questionDescription').value.trim();
     const duration = parseInt(document.getElementById('questionDuration').value);
 
-    // Collect nominee names
+    // Collect nominee names efficiently
     const nomineeInputs = document.querySelectorAll('#nomineesContainer .nominee-input');
     const nominees = [];
     
-    nomineeInputs.forEach((input, index) => {
+    for (let i = 0; i < nomineeInputs.length; i++) {
+        const input = nomineeInputs[i];
         const nameInput = input.querySelector('input[type="text"]');
         if (nameInput && nameInput.value.trim()) {
             nominees.push({
                 name: nameInput.value.trim(),
-                index: index
+                index: i
             });
         }
-    });
+    }
 
     if (nominees.length < 2) {
         showToast('At least 2 nominees are required', 'error');
+        // Restore button
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
         return;
     }
 
-    // Add basic form data
+    // Prepare FormData efficiently
+    const formData = new FormData();
     formData.append('title', title);
     formData.append('description', description);
     formData.append('duration', duration);
     formData.append('nominees', JSON.stringify(nominees));
 
-    // Add image files
+    // Add image files efficiently
     let hasImages = false;
-    nomineeInputs.forEach((input, index) => {
+    for (let i = 0; i < nomineeInputs.length; i++) {
+        const input = nomineeInputs[i];
         const fileInput = input.querySelector('input[type="file"]');
         if (fileInput && fileInput.files[0]) {
-            formData.append(`nominee_${index}_image`, fileInput.files[0]);
+            formData.append(`nominee_${i}_image`, fileInput.files[0]);
             hasImages = true;
         }
-    });
+    }
 
     try {
-        // Show INSTANT feedback - even before server responds!
-        const submitButton = e.target.querySelector('button[type="submit"]');
-        const originalText = submitButton.innerHTML;
-        submitButton.innerHTML = '✅ Creating...';
-        submitButton.disabled = true;
+        // Update button to show progress
+        submitButton.innerHTML = hasImages ? '📸 Creating with images...' : '✅ Creating question...';
         
-        // Fix: Use full URL
         const url = isEdit ? 
             `${MCA.baseURL}/admin/questions/${questionId}` : 
             `${MCA.baseURL}/admin/questions`;
         const method = isEdit ? 'PUT' : 'POST';
         
-        console.log('Making request to:', url); // Debug log
+        // Make request with timeout for faster failure detection
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
         const response = await fetch(url, {
             method: method,
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
-                // Note: Don't set Content-Type for FormData - browser sets it automatically
             },
-            body: formData
+            body: formData,
+            signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
         const data = await response.json();
 
         if (data.success) {
+            // Show success immediately
+            submitButton.innerHTML = '🎉 Success!';
+            
             const message = hasImages ? 
                 `${isEdit ? 'Question updated!' : 'Question created!'} Images are processing in the background.` :
                 `${isEdit ? 'Question updated!' : 'Question created!'} successfully!`;
             
             showToast(message, 'success');
+            
+            // Close modal immediately
             closeQuestionModal();
             
-            // Refresh questions list immediately - no loading
-            await loadAdminQuestions();
+            // Refresh questions list - no loading spinner
+            loadAdminQuestions();
         } else {
             showToast(data.error || 'Operation failed', 'error');
             // Restore button on error
@@ -880,9 +896,14 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
 
     } catch (error) {
         console.error('Question submit error:', error);
-        showToast('Network error occurred', 'error');
+        
+        if (error.name === 'AbortError') {
+            showToast('Request timed out. Please try again.', 'error');
+        } else {
+            showToast('Network error occurred', 'error');
+        }
+        
         // Restore button on error
-        const submitButton = e.target.querySelector('button[type="submit"]');
         submitButton.innerHTML = originalText;
         submitButton.disabled = false;
     }
