@@ -801,83 +801,123 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
     submitButton.innerHTML = '⚡ Creating...';
     submitButton.disabled = true;
 
-    // Prepare form data quickly
-    const title = document.getElementById('questionTitle').value.trim();
-    const description = document.getElementById('questionDescription').value.trim();
-    const duration = parseInt(document.getElementById('questionDuration').value);
-
-    // Collect nominee names efficiently
-    const nomineeInputs = document.querySelectorAll('#nomineesContainer .nominee-input');
-    const nominees = [];
-    
-    for (let i = 0; i < nomineeInputs.length; i++) {
-        const input = nomineeInputs[i];
-        const nameInput = input.querySelector('input[type="text"]');
-        if (nameInput && nameInput.value.trim()) {
-            nominees.push({
-                name: nameInput.value.trim(),
-                index: i
-            });
-        }
-    }
-
-    if (nominees.length < 2) {
-        showToast('At least 2 nominees are required', 'error');
-        // Restore button
-        submitButton.innerHTML = originalText;
-        submitButton.disabled = false;
-        return;
-    }
-
-    // Prepare FormData efficiently
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('description', description);
-    formData.append('duration', duration);
-    formData.append('nominees', JSON.stringify(nominees));
-
-    // Add image files efficiently
-    let hasImages = false;
-    for (let i = 0; i < nomineeInputs.length; i++) {
-        const input = nomineeInputs[i];
-        const fileInput = input.querySelector('input[type="file"]');
-        if (fileInput && fileInput.files[0]) {
-            formData.append(`nominee_${i}_image`, fileInput.files[0]);
-            hasImages = true;
-        }
-    }
-
     try {
+        // Prepare form data quickly
+        const title = document.getElementById('questionTitle').value.trim();
+        const description = document.getElementById('questionDescription').value.trim();
+        const duration = parseInt(document.getElementById('questionDuration').value);
+
+        // Validate inputs
+        if (!title || !description || !duration) {
+            throw new Error('Please fill in all required fields');
+        }
+
+        // Collect nominee names efficiently
+        const nomineeInputs = document.querySelectorAll('#nomineesContainer .nominee-input');
+        const nominees = [];
+        
+        for (let i = 0; i < nomineeInputs.length; i++) {
+            const input = nomineeInputs[i];
+            const nameInput = input.querySelector('input[type="text"]');
+            if (nameInput && nameInput.value.trim()) {
+                nominees.push({
+                    name: nameInput.value.trim(),
+                    index: i
+                });
+            }
+        }
+
+        if (nominees.length < 2) {
+            throw new Error('At least 2 nominees are required');
+        }
+
+        // Prepare FormData efficiently
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('description', description);
+        formData.append('duration', duration);
+        formData.append('nominees', JSON.stringify(nominees));
+
+        // Add image files efficiently
+        let hasImages = false;
+        let imageCount = 0;
+        for (let i = 0; i < nomineeInputs.length; i++) {
+            const input = nomineeInputs[i];
+            const fileInput = input.querySelector('input[type="file"]');
+            if (fileInput && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                
+                // Validate file size (10MB limit)
+                if (file.size > 10 * 1024 * 1024) {
+                    throw new Error(`Image ${file.name} is too large. Maximum size is 10MB.`);
+                }
+                
+                formData.append(`nominee_${i}_image`, file);
+                hasImages = true;
+                imageCount++;
+            }
+        }
+
         // Update button to show progress
-        submitButton.innerHTML = hasImages ? '📸 Creating with images...' : '✅ Creating question...';
+        submitButton.innerHTML = hasImages ? 
+            `📸 Creating with ${imageCount} image(s)...` : 
+            '✅ Creating question...';
         
         const url = isEdit ? 
             `${MCA.baseURL}/admin/questions/${questionId}` : 
             `${MCA.baseURL}/admin/questions`;
         const method = isEdit ? 'PUT' : 'POST';
         
-        // Make request with timeout for faster failure detection
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        console.log('Making request:', {
+            url,
+            method,
+            hasImages,
+            imageCount,
+            baseURL: MCA.baseURL,
+            token: !!localStorage.getItem('token')
+        });
+
+        // Check if token exists
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No authentication token found. Please login again.');
+        }
         
         const response = await fetch(url, {
             method: method,
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'Authorization': `Bearer ${token}`
             },
-            body: formData,
-            signal: controller.signal
+            body: formData
         });
 
-        clearTimeout(timeoutId);
+        console.log('Response received:', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok
+        });
+        
+        if (!response.ok) {
+            let errorMessage;
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorData.message || `Server error: ${response.status}`;
+            } catch {
+                const errorText = await response.text();
+                errorMessage = errorText || `HTTP ${response.status}: ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
+        }
+
         const data = await response.json();
+        console.log('Response data:', data);
 
         if (data.success) {
             // Show success immediately
             submitButton.innerHTML = '🎉 Success!';
             
             const message = hasImages ? 
-                `${isEdit ? 'Question updated!' : 'Question created!'} Images are processing in the background.` :
+                `${isEdit ? 'Question updated!' : 'Question created!'} ${imageCount} image(s) are processing in the background.` :
                 `${isEdit ? 'Question updated!' : 'Question created!'} successfully!`;
             
             showToast(message, 'success');
@@ -888,20 +928,22 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
             // Refresh questions list - no loading spinner
             loadAdminQuestions();
         } else {
-            showToast(data.error || 'Operation failed', 'error');
-            // Restore button on error
-            submitButton.innerHTML = originalText;
-            submitButton.disabled = false;
+            throw new Error(data.error || 'Operation failed');
         }
 
     } catch (error) {
         console.error('Question submit error:', error);
         
-        if (error.name === 'AbortError') {
-            showToast('Request timed out. Please try again.', 'error');
-        } else {
-            showToast('Network error occurred', 'error');
+        let errorMessage = error.message || 'Unknown error occurred';
+        
+        // Handle specific error types
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            errorMessage = 'Cannot connect to server. Please check if the server is running on port 3000.';
+        } else if (error.message.includes('Failed to fetch')) {
+            errorMessage = 'Network error. Please check your internet connection and server status.';
         }
+        
+        showToast(errorMessage, 'error');
         
         // Restore button on error
         submitButton.innerHTML = originalText;
