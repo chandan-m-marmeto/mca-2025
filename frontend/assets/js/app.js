@@ -836,7 +836,11 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
     });
 
     try {
-        // NO LOADING INDICATOR - Make it instant!
+        // Show INSTANT feedback - even before server responds!
+        const submitButton = e.target.querySelector('button[type="submit"]');
+        const originalText = submitButton.innerHTML;
+        submitButton.innerHTML = '✅ Creating...';
+        submitButton.disabled = true;
         
         // Fix: Use full URL
         const url = isEdit ? 
@@ -869,13 +873,19 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
             await loadAdminQuestions();
         } else {
             showToast(data.error || 'Operation failed', 'error');
+            // Restore button on error
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
         }
 
     } catch (error) {
         console.error('Question submit error:', error);
         showToast('Network error occurred', 'error');
+        // Restore button on error
+        const submitButton = e.target.querySelector('button[type="submit"]');
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
     }
-    // NO hideLoading() call - we never showed loading!
 }
 
 // CRUD functions

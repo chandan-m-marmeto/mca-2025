@@ -37,85 +37,7 @@ const deleteFile = (filePath) => {
     }
 };
 
-// Simple image processing function (no Redis needed!)
-const processImageAsync = async (nomineeId, questionId, tempFilePath, originalName) => {
-    // Use setTimeout to make it non-blocking
-    setTimeout(async () => {
-        try {
-            console.log(`Processing image for nominee ${nomineeId}...`);
-            
-            // Ensure the final directory exists
-            const finalDir = path.join(process.cwd(), 'uploads', 'nominees');
-            if (!fs.existsSync(finalDir)) {
-                fs.mkdirSync(finalDir, { recursive: true, mode: 0o755 });
-                console.log(`📁 Created final directory: ${finalDir}`);
-            }
-            
-            // Generate unique filename
-            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-            const fileExtension = path.extname(originalName);
-            const finalFilename = `nominee-${uniqueSuffix}${fileExtension}`;
-            const finalPath = path.join(finalDir, finalFilename);
-            
-            // Verify temp file exists before processing
-            if (!fs.existsSync(tempFilePath)) {
-                console.error(`❌ Temp file not found: ${tempFilePath}`);
-                await Nominee.findByIdAndUpdate(nomineeId, { imageProcessed: true });
-                return;
-            }
-            
-            // Process image with sharp
-            await sharp(tempFilePath)
-                .resize(400, 400, {
-                    fit: 'cover',
-                    position: 'center'
-                })
-                .jpeg({ quality: 85 })
-                .png({ quality: 85 })
-                .webp({ quality: 85 })
-                .toFile(finalPath);
-            
-            // Update nominee in MongoDB
-            await Nominee.findByIdAndUpdate(nomineeId, {
-                image: `/uploads/nominees/${finalFilename}`,
-                imageProcessed: true
-            });
-            
-            // Clean up temp file AFTER processing is complete
-            if (fs.existsSync(tempFilePath)) {
-                fs.unlinkSync(tempFilePath);
-                console.log(`🧹 Cleaned up temp file: ${tempFilePath}`);
-            }
-            
-            console.log(`✅ Image processed successfully for nominee ${nomineeId}`);
-            
-            // Emit socket event if available
-            if (global.io) {
-                global.io.emit('imageProcessed', {
-                    nomineeId,
-                    questionId,
-                    imagePath: `/uploads/nominees/${finalFilename}`
-                });
-            }
-            
-        } catch (error) {
-            console.error(`❌ Error processing image for nominee ${nomineeId}:`, error);
-            
-            // Mark as processed even on error (keeps default image)
-            await Nominee.findByIdAndUpdate(nomineeId, {
-                imageProcessed: true
-            });
-            
-            // Clean up temp file on error too
-            if (fs.existsSync(tempFilePath)) {
-                fs.unlinkSync(tempFilePath);
-                console.log(`🧹 Cleaned up temp file after error: ${tempFilePath}`);
-            }
-        }
-    }, 500); // Increase delay to 500ms to ensure temp file is written
-};
-
-// Create a new question with simple async image processing
+// Create a new question with instant response and true async image processing
 export const createQuestion = async (req, res) => {
     try {
         const { title, description, nominees, duration } = req.body;
@@ -156,39 +78,17 @@ export const createQuestion = async (req, res) => {
 
         await question.save();
 
-        // Create nominees with default images and process images async
+        // Create nominees with default images - NO WAITING FOR UPLOADS
         const createdNominees = await Promise.all(
             parsedNominees.map(async (nominee, index) => {
                 const nomineeData = {
                     name: nominee.name.trim(),
                     votes: 0,
-                    image: null, // No default image - use CSS initials
-                    imageProcessed: true // Default images are already "processed"
+                    image: null, // Always start with null - use CSS initials
+                    imageProcessed: true // Start as processed (CSS initials are "processed")
                 };
 
-                // Check if there's an uploaded file for this nominee
-                const imageFile = uploadedFiles.find(file => 
-                    file.fieldname === `nominee_${index}_image`
-                );
-
-                if (imageFile) {
-                    // Set as not processed
-                    nomineeData.imageProcessed = false;
-                }
-
                 const createdNominee = await new Nominee(nomineeData).save();
-
-                // If there's an image file, process it asynchronously
-                if (imageFile) {
-                    processImageAsync(
-                        createdNominee._id,
-                        question._id,
-                        imageFile.path,
-                        imageFile.originalname
-                    );
-                    console.log(`📥 Started processing image for nominee: ${nominee.name}`);
-                }
-
                 return createdNominee;
             })
         );
@@ -197,20 +97,40 @@ export const createQuestion = async (req, res) => {
         question.nominees = createdNominees.map(n => n._id);
         await question.save();
 
-        // Populate nominees and return
+        // Populate nominees and return IMMEDIATELY - NO WAITING!
         const populatedQuestion = await Question.findById(question._id)
             .populate('nominees');
 
-        // Count how many images are being processed
-        const processingCount = createdNominees.filter(n => !n.imageProcessed).length;
+        // Count how many images need processing
+        const imageCount = uploadedFiles.length;
 
+        // RESPOND IMMEDIATELY - Don't wait for any processing!
         res.status(201).json({
             success: true,
             data: populatedQuestion,
-            message: processingCount > 0 
-                ? `Question created! ${processingCount} image(s) are being processed in the background.`
+            message: imageCount > 0 
+                ? `Question created! ${imageCount} image(s) will be processed in the background.`
                 : 'Question created successfully!'
         });
+
+        // NOW process images AFTER sending response (fire and forget)
+        if (uploadedFiles.length > 0) {
+            // Process images in the background - AFTER response is sent
+            setImmediate(() => {
+                uploadedFiles.forEach((imageFile, index) => {
+                    if (imageFile.fieldname === `nominee_${index}_image` && createdNominees[index]) {
+                        // Start processing this image
+                        processImageInBackground(
+                            createdNominees[index]._id,
+                            question._id,
+                            imageFile.path,
+                            imageFile.originalname
+                        );
+                        console.log(`🎯 Queued image processing for nominee: ${parsedNominees[index].name}`);
+                    }
+                });
+            });
+        }
 
     } catch (error) {
         console.error('Create question error:', error);
@@ -227,6 +147,79 @@ export const createQuestion = async (req, res) => {
             error: error.message
         });
     }
+};
+
+// Renamed function for true background processing
+const processImageInBackground = async (nomineeId, questionId, tempFilePath, originalName) => {
+    // Wait a bit to ensure the response has been sent
+    setTimeout(async () => {
+        try {
+            console.log(`🖼️ Starting background image processing for nominee ${nomineeId}...`);
+            
+            // Ensure the final directory exists
+            const finalDir = path.join(process.cwd(), 'uploads', 'nominees');
+            if (!fs.existsSync(finalDir)) {
+                fs.mkdirSync(finalDir, { recursive: true, mode: 0o755 });
+                console.log(`📁 Created final directory: ${finalDir}`);
+            }
+            
+            // Verify temp file still exists
+            if (!fs.existsSync(tempFilePath)) {
+                console.error(`❌ Temp file no longer exists: ${tempFilePath}`);
+                return;
+            }
+            
+            // Generate unique filename
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            const fileExtension = path.extname(originalName);
+            const finalFilename = `nominee-${uniqueSuffix}${fileExtension}`;
+            const finalPath = path.join(finalDir, finalFilename);
+            
+            // Process image with sharp
+            await sharp(tempFilePath)
+                .resize(400, 400, {
+                    fit: 'cover',
+                    position: 'center'
+                })
+                .jpeg({ quality: 85 })
+                .png({ quality: 85 })
+                .webp({ quality: 85 })
+                .toFile(finalPath);
+            
+            // Update nominee in MongoDB
+            await Nominee.findByIdAndUpdate(nomineeId, {
+                image: `/uploads/nominees/${finalFilename}`,
+                imageProcessed: true
+            });
+            
+            // Clean up temp file
+            if (fs.existsSync(tempFilePath)) {
+                fs.unlinkSync(tempFilePath);
+                console.log(`🧹 Cleaned up temp file: ${tempFilePath}`);
+            }
+            
+            console.log(`✅ Background image processing completed for nominee ${nomineeId}`);
+            
+            // Emit socket event for real-time UI update
+            if (global.io) {
+                global.io.emit('imageProcessed', {
+                    nomineeId,
+                    questionId,
+                    imagePath: `/uploads/nominees/${finalFilename}`
+                });
+                console.log(`📡 Socket event emitted for nominee ${nomineeId}`);
+            }
+            
+        } catch (error) {
+            console.error(`❌ Background image processing failed for nominee ${nomineeId}:`, error);
+            
+            // Clean up temp file even on error
+            if (fs.existsSync(tempFilePath)) {
+                fs.unlinkSync(tempFilePath);
+                console.log(`🧹 Cleaned up temp file after error: ${tempFilePath}`);
+            }
+        }
+    }, 1000); // 1 second delay to ensure response is fully sent
 };
 
 // Update existing question with queued image processing
@@ -317,7 +310,7 @@ export const updateQuestion = async (req, res) => {
 
                 // If there's an image file, add it to the processing queue
                 if (imageFile) {
-                    processImageAsync(
+                    processImageInBackground(
                         createdNominee._id,
                         existingQuestion._id,
                         imageFile.path,
