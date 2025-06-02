@@ -795,6 +795,10 @@ function removeNomineeInput(button) {
 async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
     e.preventDefault();
 
+    console.log('🚀 QUESTION SUBMIT STARTED');
+    console.log('- Is Edit:', isEdit);
+    console.log('- Question ID:', questionId);
+
     // Show INSTANT feedback FIRST - before any processing
     const submitButton = e.target.querySelector('button[type="submit"]');
     const originalText = submitButton.innerHTML;
@@ -807,6 +811,11 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
         const description = document.getElementById('questionDescription').value.trim();
         const duration = parseInt(document.getElementById('questionDuration').value);
 
+        console.log('📝 FORM DATA EXTRACTED:');
+        console.log('- Title:', title);
+        console.log('- Description:', description);
+        console.log('- Duration:', duration);
+
         // Validate inputs
         if (!title || !description || !duration) {
             throw new Error('Please fill in all required fields');
@@ -817,19 +826,32 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
         const nominees = [];
         const imageFiles = [];
         
+        console.log('👥 PROCESSING NOMINEES:');
+        console.log('- Found nominee inputs:', nomineeInputs.length);
+        
         for (let i = 0; i < nomineeInputs.length; i++) {
             const input = nomineeInputs[i];
             const nameInput = input.querySelector('input[type="text"]');
+            console.log(`- Nominee ${i + 1} input:`, nameInput?.value);
+            
             if (nameInput && nameInput.value.trim()) {
-                nominees.push({
+                const nomineeData = {
                     name: nameInput.value.trim(),
                     index: i
-                });
+                };
+                nominees.push(nomineeData);
+                console.log(`✅ Added nominee ${i + 1}:`, nomineeData);
 
                 // Collect image files separately
                 const fileInput = input.querySelector('input[type="file"]');
                 if (fileInput && fileInput.files[0]) {
                     const file = fileInput.files[0];
+                    
+                    console.log(`📸 Image found for nominee ${i + 1}:`, {
+                        name: file.name,
+                        size: file.size,
+                        type: file.type
+                    });
                     
                     // Validate file size (10MB limit)
                     if (file.size > 10 * 1024 * 1024) {
@@ -845,6 +867,12 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
             }
         }
 
+        console.log('📊 NOMINEES SUMMARY:');
+        console.log('- Total nominees:', nominees.length);
+        console.log('- Nominees data:', nominees);
+        console.log('- Images to upload:', imageFiles.length);
+        console.log('- Image files:', imageFiles.map(f => ({ name: f.nomineeName, fileName: f.file.name })));
+
         if (nominees.length < 2) {
             throw new Error('At least 2 nominees are required');
         }
@@ -859,12 +887,18 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
             nominees: nominees.map(n => ({ name: n.name })) // Just names, no images
         };
 
+        console.log('📤 SENDING QUESTION DATA:');
+        console.log('- Data:', JSON.stringify(questionData, null, 2));
+
         const url = isEdit ? 
             `${MCA.baseURL}/admin/questions/${questionId}` : 
             `${MCA.baseURL}/admin/questions`;
         const method = isEdit ? 'PUT' : 'POST';
         
-        console.log('Creating question without images:', questionData);
+        console.log('🌐 REQUEST DETAILS:');
+        console.log('- URL:', url);
+        console.log('- Method:', method);
+        console.log('- Base URL:', MCA.baseURL);
 
         // Check if token exists
         const token = localStorage.getItem('token');
@@ -872,7 +906,11 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
             throw new Error('No authentication token found. Please login again.');
         }
         
+        console.log('🔑 Token exists:', !!token);
+        console.log('🔑 Token preview:', token ? token.substring(0, 20) + '...' : 'none');
+        
         // Create question with JSON (FAST!)
+        console.log('📨 MAKING REQUEST...');
         const response = await fetch(url, {
             method: method,
             headers: {
@@ -882,26 +920,32 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
             body: JSON.stringify(questionData)
         });
 
-        console.log('Question creation response:', {
-            status: response.status,
-            statusText: response.statusText,
-            ok: response.ok
-        });
+        console.log('📨 RESPONSE RECEIVED:');
+        console.log('- Status:', response.status);
+        console.log('- Status Text:', response.statusText);
+        console.log('- OK:', response.ok);
+        console.log('- Headers:', Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
             let errorMessage;
+            let responseText;
             try {
-                const errorData = await response.json();
+                responseText = await response.text();
+                console.log('❌ Response body (text):', responseText);
+                
+                // Try to parse as JSON
+                const errorData = JSON.parse(responseText);
+                console.log('❌ Parsed error data:', errorData);
                 errorMessage = errorData.error || errorData.message || `Server error: ${response.status}`;
-            } catch {
-                const errorText = await response.text();
-                errorMessage = errorText || `HTTP ${response.status}: ${response.statusText}`;
+            } catch (parseError) {
+                console.log('❌ Could not parse error response as JSON:', parseError);
+                errorMessage = responseText || `HTTP ${response.status}: ${response.statusText}`;
             }
             throw new Error(errorMessage);
         }
 
         const data = await response.json();
-        console.log('Question created successfully:', data);
+        console.log('✅ SUCCESS RESPONSE:', data);
 
         if (data.success) {
             // Show success immediately
@@ -923,6 +967,7 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
 
             // STEP 2: Upload images in background (AFTER question is created and shown)
             if (hasImages && data.data && data.data.nominees) {
+                console.log('🖼️ Starting background image uploads...');
                 uploadImagesInBackground(data.data, imageFiles);
             }
         } else {
@@ -930,7 +975,8 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
         }
 
     } catch (error) {
-        console.error('Question submit error:', error);
+        console.error('❌ QUESTION SUBMIT ERROR:', error);
+        console.error('❌ Error stack:', error.stack);
         
         let errorMessage = error.message || 'Unknown error occurred';
         

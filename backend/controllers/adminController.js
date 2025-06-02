@@ -40,51 +40,116 @@ const deleteFile = (filePath) => {
 // Create a new question with instant response (NO FILES)
 export const createQuestion = async (req, res) => {
     try {
+        console.log('📝 CREATE QUESTION REQUEST:');
+        console.log('Headers:', req.headers);
+        console.log('Body:', JSON.stringify(req.body, null, 2));
+        console.log('Content-Type:', req.headers['content-type']);
+        
         const { title, description, nominees, duration } = req.body;
+
+        console.log('📋 Extracted data:');
+        console.log('- Title:', title);
+        console.log('- Description:', description);
+        console.log('- Duration:', duration);
+        console.log('- Nominees (raw):', nominees);
+        console.log('- Nominees type:', typeof nominees);
+        console.log('- Is Array:', Array.isArray(nominees));
 
         // This endpoint now only handles JSON data, no files
         let parsedNominees;
         if (Array.isArray(nominees)) {
+            console.log('✅ Nominees is already an array');
             parsedNominees = nominees;
         } else if (typeof nominees === 'string') {
+            console.log('🔄 Parsing nominees from string...');
             try {
                 parsedNominees = JSON.parse(nominees);
+                console.log('✅ Parsed nominees:', parsedNominees);
             } catch (error) {
+                console.error('❌ JSON parse error:', error);
                 return res.status(400).json({
                     success: false,
-                    error: 'Invalid nominees format'
+                    error: 'Invalid nominees JSON format'
                 });
             }
         } else {
+            console.error('❌ Invalid nominees type:', typeof nominees);
+            console.error('❌ Nominees value:', nominees);
             return res.status(400).json({
                 success: false,
-                error: 'Invalid nominees format'
+                error: `Invalid nominees format - expected array or string, got ${typeof nominees}`
             });
         }
 
-        // Validate nominees
-        if (!parsedNominees || !Array.isArray(parsedNominees) || parsedNominees.length < 2) {
+        console.log('🔍 Final parsed nominees:', parsedNominees);
+
+        // Validate nominees structure
+        if (!parsedNominees || !Array.isArray(parsedNominees)) {
+            console.error('❌ Nominees is not an array after parsing');
+            return res.status(400).json({
+                success: false,
+                error: 'Nominees must be an array'
+            });
+        }
+
+        if (parsedNominees.length < 2) {
+            console.error('❌ Not enough nominees:', parsedNominees.length);
             return res.status(400).json({
                 success: false,
                 error: 'At least 2 nominees are required'
             });
         }
 
+        // Validate each nominee has a name
+        for (let i = 0; i < parsedNominees.length; i++) {
+            const nominee = parsedNominees[i];
+            console.log(`👤 Validating nominee ${i + 1}:`, nominee);
+            
+            if (!nominee || typeof nominee !== 'object') {
+                console.error(`❌ Nominee ${i + 1} is not an object:`, nominee);
+                return res.status(400).json({
+                    success: false,
+                    error: `Nominee ${i + 1} must be an object`
+                });
+            }
+            
+            if (!nominee.name || typeof nominee.name !== 'string' || !nominee.name.trim()) {
+                console.error(`❌ Nominee ${i + 1} has invalid name:`, nominee.name);
+                return res.status(400).json({
+                    success: false,
+                    error: `Nominee ${i + 1} must have a valid name`
+                });
+            }
+        }
+
+        console.log('✅ All nominees validated successfully');
+
         // Calculate start and end times
         const startTime = new Date();
         const endTime = new Date(startTime.getTime() + (duration * 60 * 60 * 1000));
 
-        // Create all nominees (single batch operation) - ALL with null images
-        const nomineeDataArray = parsedNominees.map(nominee => ({
-            name: nominee.name.trim(),
-            votes: 0,
-            image: null, // Always start with null - use CSS initials
-            imageProcessed: true // Start as processed (CSS initials are "processed")
-        }));
+        console.log('⏰ Time calculated:');
+        console.log('- Start:', startTime);
+        console.log('- End:', endTime);
 
+        // Create all nominees (single batch operation) - ALL with null images
+        const nomineeDataArray = parsedNominees.map((nominee, index) => {
+            const nomineeData = {
+                name: nominee.name.trim(),
+                votes: 0,
+                image: null, // Always start with null - use CSS initials
+                imageProcessed: true // Start as processed (CSS initials are "processed")
+            };
+            console.log(`👤 Creating nominee ${index + 1}:`, nomineeData);
+            return nomineeData;
+        });
+
+        console.log('💾 Inserting nominees into database...');
         const createdNominees = await Nominee.insertMany(nomineeDataArray);
+        console.log('✅ Nominees created:', createdNominees.length);
 
         // Create question with nominee IDs (single operation)
+        console.log('📄 Creating question document...');
         const question = await new Question({
             title,
             description,
@@ -93,6 +158,8 @@ export const createQuestion = async (req, res) => {
             endTime,
             isActive: true
         }).save();
+
+        console.log('✅ Question created with ID:', question._id);
 
         // RESPOND IMMEDIATELY with complete data
         const responseData = {
@@ -111,7 +178,8 @@ export const createQuestion = async (req, res) => {
             }))
         };
 
-        console.log(`✅ Question created instantly: ${title}`);
+        console.log('🎉 Question created instantly:', title);
+        console.log('📤 Sending response...');
 
         res.status(201).json({
             success: true,
@@ -120,7 +188,8 @@ export const createQuestion = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Create question error:', error);
+        console.error('❌ CREATE QUESTION ERROR:', error);
+        console.error('❌ Error stack:', error.stack);
         
         res.status(500).json({
             success: false,
