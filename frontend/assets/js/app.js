@@ -491,6 +491,8 @@ function displayCurrentQuestion() {
                                             `<img src="${MCA.staticURL}${nominee.image}" 
                                                   alt="${name}" 
                                                   class="nominee-avatar-img" 
+                                                  onclick="showNomineeImagePreview('${MCA.staticURL}${nominee.image}', '${name}')"
+                                                  style="cursor: pointer;"
                                                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                              <div class="nominee-avatar" style="display:none;">${name.charAt(0).toUpperCase()}</div>` :
                                             `<div class="nominee-avatar">${name.charAt(0).toUpperCase()}</div>`
@@ -623,13 +625,13 @@ function showQuestionModal(questionData = null) {
                               rows="3" required>${questionData?.description || ''}</textarea>
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group duration-group">
                     <label for="questionDuration">Duration (hours)</label>
                     <input type="number" id="questionDuration" placeholder="Enter duration in hours" 
                            min="1" max="168" value="${calculatedDuration}" required>
                 </div>
                 
-                <div class="form-group">
+                <div class="nominees-container">
                     <label>Nominees</label>
                     <div id="nomineesContainer">
                         ${questionData?.nominees?.map((n, index) => `
@@ -640,16 +642,16 @@ function showQuestionModal(questionData = null) {
                                 </div>
                                 <div class="nominee-image-section">
                                     <label class="image-upload-label">
-                                        <span>📸 Upload Image (Optional)</span>
+                                        <span>Upload Image (Optional)</span>
                                         <input type="file" 
                                                name="nominee_${index}_image" 
                                                accept="image/*" 
                                                onchange="previewImage(this)">
                                     </label>
-                                    <div class="image-preview">
+                                    <div class="image-preview" onclick="showImagePreview(this)">
                                         ${n.image && n.image !== null ? 
                                             `<img src="${MCA.staticURL}${n.image}" alt="Preview" class="preview-img">
-                                             <button type="button" onclick="removeImage(this)" class="btn-remove-img">×</button>` : 
+                                             <button type="button" onclick="removeImage(this); event.stopPropagation();" class="btn-remove-img">×</button>` : 
                                             '<span class="no-image">No image selected</span>'
                                         }
                                     </div>
@@ -663,13 +665,13 @@ function showQuestionModal(questionData = null) {
                                 </div>
                                 <div class="nominee-image-section">
                                     <label class="image-upload-label">
-                                        <span>📸 Upload Image (Optional)</span>
+                                        <span>Upload Image (Optional)</span>
                                         <input type="file" 
                                                name="nominee_0_image" 
                                                accept="image/*" 
                                                onchange="previewImage(this)">
                                     </label>
-                                    <div class="image-preview">
+                                    <div class="image-preview" onclick="showImagePreview(this)">
                                         <span class="no-image">No image selected</span>
                                     </div>
                                 </div>
@@ -681,13 +683,13 @@ function showQuestionModal(questionData = null) {
                                 </div>
                                 <div class="nominee-image-section">
                                     <label class="image-upload-label">
-                                        <span>📸 Upload Image (Optional)</span>
+                                        <span>Upload Image (Optional)</span>
                                         <input type="file" 
                                                name="nominee_1_image" 
                                                accept="image/*" 
                                                onchange="previewImage(this)">
                                     </label>
-                                    <div class="image-preview">
+                                    <div class="image-preview" onclick="showImagePreview(this)">
                                         <span class="no-image">No image selected</span>
                                     </div>
                                 </div>
@@ -695,7 +697,7 @@ function showQuestionModal(questionData = null) {
                         `}
                     </div>
                     <button type="button" onclick="addNomineeInput()" class="btn btn-outline">
-                        + Add Nominee
+                        Add Nominee
                     </button>
                 </div>
                 
@@ -757,13 +759,13 @@ function addNomineeInput() {
         </div>
         <div class="nominee-image-section">
             <label class="image-upload-label">
-                <span>📸 Upload Image (Optional)</span>
+                <span>Upload Image (Optional)</span>
                 <input type="file" 
                        name="nominee_${nextIndex}_image" 
                        accept="image/*" 
                        onchange="previewImage(this)">
             </label>
-            <div class="image-preview">
+            <div class="image-preview" onclick="showImagePreview(this)">
                 <span class="no-image">No image selected</span>
             </div>
         </div>
@@ -1537,7 +1539,7 @@ function previewImage(input) {
         reader.onload = function(e) {
             preview.innerHTML = `
                 <img src="${e.target.result}" alt="Preview" class="preview-img">
-                <button type="button" onclick="removeImage(this)" class="btn-remove-img">×</button>
+                <button type="button" onclick="removeImage(this); event.stopPropagation();" class="btn-remove-img">×</button>
             `;
         };
         
@@ -1556,6 +1558,93 @@ function removeImage(button) {
     
     fileInput.value = '';
     preview.innerHTML = '<span class="no-image">No image selected</span>';
+}
+
+// New function to show image preview modal
+function showImagePreview(previewElement) {
+    const img = previewElement.querySelector('.preview-img');
+    if (!img) return; // No image to preview
+    
+    // Get nominee name for the preview
+    const nomineeInput = previewElement.closest('.nominee-input');
+    const nameInput = nomineeInput.querySelector('input[type="text"]');
+    const nomineeName = nameInput.value.trim() || 'Nominee';
+    
+    // Create or get existing modal
+    let modal = document.getElementById('imagePreviewModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'imagePreviewModal';
+        modal.className = 'image-preview-modal';
+        document.body.appendChild(modal);
+    }
+    
+    modal.innerHTML = `
+        <div class="image-preview-content">
+            <img src="${img.src}" alt="${nomineeName}" class="image-preview-large">
+            <button class="image-preview-close" onclick="closeImagePreview()">×</button>
+            <div class="image-preview-info">
+                <h3>${nomineeName}</h3>
+                <p>Click outside to close</p>
+            </div>
+        </div>
+    `;
+    
+    // Show modal
+    modal.classList.add('show');
+    
+    // Close on click outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeImagePreview();
+        }
+    });
+}
+
+// Function to close image preview modal
+function closeImagePreview() {
+    const modal = document.getElementById('imagePreviewModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 300);
+    }
+}
+
+// Function to show nominee image preview from main display
+function showNomineeImagePreview(imageSrc, nomineeName) {
+    // Create or get existing modal
+    let modal = document.getElementById('imagePreviewModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'imagePreviewModal';
+        modal.className = 'image-preview-modal';
+        document.body.appendChild(modal);
+    }
+    
+    modal.innerHTML = `
+        <div class="image-preview-content">
+            <img src="${imageSrc}" alt="${nomineeName}" class="image-preview-large">
+            <button class="image-preview-close" onclick="closeImagePreview()">×</button>
+            <div class="image-preview-info">
+                <h3>${nomineeName}</h3>
+                <p>Click outside to close</p>
+            </div>
+        </div>
+    `;
+    
+    // Show modal
+    modal.classList.add('show');
+    
+    // Close on click outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeImagePreview();
+        }
+    });
 }
 
 // Separate function for handling new question click
