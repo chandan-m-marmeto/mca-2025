@@ -350,10 +350,12 @@ function logout() {
 }
 
 async function loadAdminQuestions() {
+    // Declare isInitialLoad outside try block to fix scope issue
+    const isInitialLoad = !MCA.allQuestions || MCA.allQuestions.length === 0;
+    
     try {
         console.log('Loading admin questions...');
         // Only show loading on initial load, not on refreshes
-        const isInitialLoad = !MCA.allQuestions || MCA.allQuestions.length === 0;
         if (isInitialLoad) {
             showLoading();
         }
