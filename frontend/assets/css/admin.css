@@ -1175,4 +1175,65 @@
         width: 50px;
         height: 50px;
     }
+}
+
+/* Nominee avatars - Initial style fallback */
+.nominee-avatar,
+.nominee-initial-avatar,
+.nominee-initial-small,
+.legend-initial {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: bold;
+    border-radius: 50%;
+    text-transform: uppercase;
+}
+
+.nominee-avatar {
+    width: 80px;
+    height: 80px;
+    font-size: 32px;
+}
+
+.nominee-initial-avatar {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+}
+
+.nominee-initial-small {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+}
+
+.legend-initial {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+}
+
+/* Nominee avatar image styles */
+.nominee-avatar-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.nominee-avatar-small img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.legend-avatar img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
 } 

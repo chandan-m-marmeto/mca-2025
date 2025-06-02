@@ -7,7 +7,7 @@ const nomineeSchema = new mongoose.Schema({
   },
   image: {
     type: String,
-    default: '/uploads/nominees/default-avatar.png'
+    default: null // No default image - use CSS initials instead
   },
   votes: {
     type: Number,
@@ -15,7 +15,7 @@ const nomineeSchema = new mongoose.Schema({
   },
   imageProcessed: {
     type: Boolean,
-    default: true // Default true for nominees without uploaded images
+    default: true // Default true since no image to process
   }
 }, {
   timestamps: true

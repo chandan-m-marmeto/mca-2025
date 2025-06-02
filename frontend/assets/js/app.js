@@ -471,27 +471,17 @@ function displayCurrentQuestion() {
                         ${safeQuestion.nominees.map((nominee, index) => {
                             const name = nominee.name || 'Unknown';
                             
-                            // Add debugging to see what data we actually have
-                            console.log(`Nominee ${index}:`, {
-                                name: name,
-                                image: nominee.image,
-                                hasImage: !!nominee.image,
-                                isNotDefault: nominee.image !== '/uploads/nominees/default-avatar.png'
-                            });
-                            
-                            const imageUrl = nominee.image && nominee.image !== '/uploads/nominees/default-avatar.png' 
-                                ? `${MCA.staticURL}${nominee.image}` 
-                                : null;
-                            
-                            console.log(`Constructed URL for ${name}:`, imageUrl);
+                            // Check if nominee has an actual uploaded image (not null and not default)
+                            const hasActualImage = nominee.image && nominee.image !== null;
                             
                             return `
                                 <div class="nominee-card-clean">
                                     <div class="nominee-info">
-                                        ${imageUrl ? 
-                                            `<img src="${imageUrl}" alt="${name}" class="nominee-avatar-img" 
-                                                  onload="console.log('Image loaded:', '${imageUrl}')"
-                                                  onerror="console.log('Image failed to load:', '${imageUrl}'); this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                        ${hasActualImage ? 
+                                            `<img src="${MCA.staticURL}${nominee.image}" 
+                                                  alt="${name}" 
+                                                  class="nominee-avatar-img" 
+                                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                              <div class="nominee-avatar" style="display:none;">${name.charAt(0).toUpperCase()}</div>` :
                                             `<div class="nominee-avatar">${name.charAt(0).toUpperCase()}</div>`
                                         }
@@ -647,7 +637,7 @@ function showQuestionModal(questionData = null) {
                                                onchange="previewImage(this)">
                                     </label>
                                     <div class="image-preview">
-                                        ${n.image && n.image !== '/uploads/nominees/default-avatar.png' ? 
+                                        ${n.image && n.image !== null ? 
                                             `<img src="${MCA.staticURL}${n.image}" alt="Preview" class="preview-img">
                                              <button type="button" onclick="removeImage(this)" class="btn-remove-img">×</button>` : 
                                             '<span class="no-image">No image selected</span>'
@@ -913,8 +903,8 @@ function showResultsModal(question) {
 
     // Helper function to get image URL with fallback
     const getImageUrl = (imagePath) => {
-        if (!imagePath || imagePath === '/uploads/nominees/default-avatar.png') {
-            return `${MCA.staticURL}/uploads/nominees/default-avatar.png`;
+        if (!imagePath || imagePath === null) {
+            return null; // Return null for initial avatar
         }
         return `${MCA.staticURL}${imagePath}`;
     };
@@ -990,9 +980,13 @@ function showResultsModal(question) {
                             return `
                                 <div class="nominee-card ${isWinner ? 'winner-card' : ''}">
                                     <div class="nominee-avatar">
-                                        <img src="${getImageUrl(nominee.image)}" 
-                                             alt="${nominee.name || 'Unknown'}"
-                                             onerror="this.src='${MCA.staticURL}/uploads/nominees/default-avatar.png'">
+                                        ${getImageUrl(nominee.image) ? 
+                                            `<img src="${getImageUrl(nominee.image)}" 
+                                                  alt="${nominee.name || 'Unknown'}"
+                                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                             <div class="nominee-initial-avatar" style="display:none;">${(nominee.name || 'U').charAt(0).toUpperCase()}</div>` :
+                                            `<div class="nominee-initial-avatar">${(nominee.name || 'U').charAt(0).toUpperCase()}</div>`
+                                        }
                                         ${isWinner ? '<div class="winner-crown">👑</div>' : ''}
                                     </div>
                                     <div class="nominee-info">
@@ -1045,9 +1039,13 @@ function showResultsModal(question) {
                                         ${isWinner ? '🏆' : `#${index + 1}`}
                                     </div>
                                     <div class="nominee-avatar-small">
-                                        <img src="${getImageUrl(nominee.image)}" 
-                                             alt="${name}"
-                                             onerror="this.src='${MCA.staticURL}/uploads/nominees/default-avatar.png'">
+                                        ${getImageUrl(nominee.image) ? 
+                                            `<img src="${getImageUrl(nominee.image)}" 
+                                                  alt="${name}"
+                                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                             <div class="nominee-initial-small" style="display:none;">${name.charAt(0).toUpperCase()}</div>` :
+                                            `<div class="nominee-initial-small">${name.charAt(0).toUpperCase()}</div>`
+                                        }
                                     </div>
                                     <div class="nominee-details">
                                         <h4 class="nominee-name">
@@ -1086,9 +1084,13 @@ function showResultsModal(question) {
                                     <div class="legend-item">
                                         <div class="legend-color" style="background-color: ${color}"></div>
                                         <div class="legend-avatar">
-                                            <img src="${getImageUrl(nominee.image)}" 
-                                                 alt="${nominee.name}"
-                                                 onerror="this.src='${MCA.staticURL}/uploads/nominees/default-avatar.png'">
+                                            ${getImageUrl(nominee.image) ? 
+                                                `<img src="${getImageUrl(nominee.image)}" 
+                                                      alt="${nominee.name}"
+                                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                 <div class="legend-initial" style="display:none;">${nominee.name.charAt(0).toUpperCase()}</div>` :
+                                                `<div class="legend-initial">${nominee.name.charAt(0).toUpperCase()}</div>`
+                                            }
                                         </div>
                                         <span class="legend-text">${nominee.name}: ${votes} (${percentage}%)</span>
                                     </div>

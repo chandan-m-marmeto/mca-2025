@@ -128,7 +128,7 @@ export const createQuestion = async (req, res) => {
                 const nomineeData = {
                     name: nominee.name.trim(),
                     votes: 0,
-                    image: '/uploads/nominees/default-avatar.png', // Always start with default
+                    image: null, // No default image - use CSS initials
                     imageProcessed: true // Default images are already "processed"
                 };
 
@@ -260,7 +260,7 @@ export const updateQuestion = async (req, res) => {
                 const nomineeData = {
                     name: nominee.name.trim(),
                     votes: existingNominee ? existingNominee.votes : 0, // Preserve votes
-                    image: '/uploads/nominees/default-avatar.png', // Always start with default
+                    image: null, // No default image - use CSS initials
                     imageProcessed: true
                 };
 
