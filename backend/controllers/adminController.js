@@ -277,7 +277,7 @@ export const updateQuestion = async (req, res) => {
         
         // Delete old nominee images (but preserve vote data)
         existingNominees.forEach(nominee => {
-            if (nominee.image && nominee.image !== '/uploads/nominees/default-avatar.png') {
+            if (nominee.image && nominee.image !== null) {
                 const fullPath = path.join(process.cwd(), nominee.image);
                 deleteFile(fullPath);
             }
@@ -307,7 +307,7 @@ export const updateQuestion = async (req, res) => {
                     // Set as not processed and store temp path
                     nomineeData.imageProcessed = false;
                     nomineeData.tempImagePath = imageFile.path;
-                } else if (existingNominee && existingNominee.image && existingNominee.image !== '/uploads/nominees/default-avatar.png') {
+                } else if (existingNominee && existingNominee.image && existingNominee.image !== null) {
                     // Keep existing image if no new image uploaded
                     nomineeData.image = existingNominee.image;
                     nomineeData.imageProcessed = existingNominee.imageProcessed;

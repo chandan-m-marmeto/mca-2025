@@ -145,13 +145,10 @@ function displayCurrentUserQuestion() {
                     
                     // Fix image path - use proper base URL
                     const getImageUrl = (image) => {
-                        if (!image || image === 'default-avatar.png') {
-                            return `${MCA.staticURL}/uploads/nominees/default-avatar.png`;
+                        if (!image || image === null) {
+                            return null;
                         }
-                        if (image.startsWith('/uploads/')) {
-                            return `${MCA.staticURL}${image}`;
-                        }
-                        return `${MCA.staticURL}/uploads/nominees/${image}`;
+                        return `${MCA.staticURL}${image}`;
                     };
                     
                     return `
@@ -159,9 +156,14 @@ function displayCurrentUserQuestion() {
                              data-nominee-id="${nomineeId}"
                              onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
                             <div class="nominee-avatar">
-                                <img src="${getImageUrl(nominee.image)}" 
-                                     alt="${nomineeName}" 
-                                     onerror="this.src='${MCA.staticURL}/uploads/nominees/default-avatar.png'">
+                                ${getImageUrl(nominee.image) ? 
+                                    `<img src="${getImageUrl(nominee.image)}" 
+                                          alt="${nominee.name}" 
+                                          class="nominee-avatar-img"
+                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                     <div class="nominee-initial-avatar" style="display:none;">${nominee.name.charAt(0).toUpperCase()}</div>` :
+                                    `<div class="nominee-initial-avatar">${nominee.name.charAt(0).toUpperCase()}</div>`
+                                }
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>

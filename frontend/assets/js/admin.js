@@ -145,10 +145,15 @@ function displayCurrentAdminQuestion() {
                             return `
                                 <div class="full-nominee-card">
                                     <div class="nominee-header">
-                                        <div class="nominee-avatar-full">
-                                            <img src="/assets/images/${nominee.image || 'default-avatar.png'}" 
-                                                 alt="${nominee.name}"
-                                                 onerror="this.src='/assets/images/default-avatar.png'">
+                                        <div class="nominee-avatar">
+                                            ${nominee.image && nominee.image !== null ? 
+                                                `<img src="${MCA.staticURL}${nominee.image}" 
+                                                      alt="${nominee.name || 'Unknown'}" 
+                                                      class="nominee-avatar-img"
+                                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                 <div class="nominee-initial-avatar" style="display:none;">${(nominee.name || 'U').charAt(0).toUpperCase()}</div>` :
+                                                `<div class="nominee-initial-avatar">${(nominee.name || 'U').charAt(0).toUpperCase()}</div>`
+                                            }
                                         </div>
                                         <div class="nominee-title">
                                             <h4>${nominee.name}</h4>
