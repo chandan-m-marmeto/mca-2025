@@ -2,6 +2,7 @@ import Question from '../models/Question.js';
 import Nominee from '../models/Nominee.js';
 import path from 'path';
 import fs from 'fs';
+import { addImageProcessingJob, getQueueStats } from '../queues/imageQueue.js';
 
 // Helper function to delete file
 const deleteFile = (filePath) => {
@@ -14,7 +15,7 @@ const deleteFile = (filePath) => {
     }
 };
 
-// Create a new question with image uploads
+// Create a new question with queued image processing
 export const createQuestion = async (req, res) => {
     try {
         const { title, description, nominees, duration } = req.body;
@@ -39,12 +40,30 @@ export const createQuestion = async (req, res) => {
             });
         }
 
-        // Create nominees with images
+        // Calculate start and end times
+        const startTime = new Date();
+        const endTime = new Date(startTime.getTime() + (duration * 60 * 60 * 1000));
+
+        // Create question first
+        const question = new Question({
+            title,
+            description,
+            nominees: [], // Will be populated after nominees are created
+            startTime,
+            endTime,
+            isActive: true
+        });
+
+        await question.save();
+
+        // Create nominees with default images and queue image processing
         const createdNominees = await Promise.all(
-            parsedNominees.map((nominee, index) => {
+            parsedNominees.map(async (nominee, index) => {
                 const nomineeData = {
                     name: nominee.name.trim(),
-                    votes: 0
+                    votes: 0,
+                    image: '/uploads/nominees/default-avatar.png', // Always start with default
+                    imageProcessed: true // Default images are already "processed"
                 };
 
                 // Check if there's an uploaded file for this nominee
@@ -53,43 +72,64 @@ export const createQuestion = async (req, res) => {
                 );
 
                 if (imageFile) {
-                    nomineeData.image = `/uploads/nominees/${imageFile.filename}`;
-                } else {
-                    nomineeData.image = '/uploads/nominees/default-avatar.png';
+                    // Set as not processed and store temp path
+                    nomineeData.imageProcessed = false;
+                    nomineeData.tempImagePath = imageFile.path;
                 }
 
-                return new Nominee(nomineeData).save();
+                const createdNominee = await new Nominee(nomineeData).save();
+
+                // If there's an image file, add it to the processing queue
+                if (imageFile) {
+                    try {
+                        const job = await addImageProcessingJob(
+                            createdNominee._id,
+                            question._id,
+                            imageFile.path,
+                            imageFile.originalname,
+                            1 // High priority for new questions
+                        );
+
+                        // Update nominee with job ID for tracking
+                        await Nominee.findByIdAndUpdate(createdNominee._id, {
+                            imageJobId: job.id.toString()
+                        });
+
+                        console.log(`📥 Queued image processing for nominee: ${nominee.name}`);
+                    } catch (queueError) {
+                        console.error('Error adding image to queue:', queueError);
+                        // Don't fail the entire request if queue fails
+                        // The nominee will remain with default image
+                    }
+                }
+
+                return createdNominee;
             })
         );
 
-        // Calculate start and end times
-        const startTime = new Date();
-        const endTime = new Date(startTime.getTime() + (duration * 60 * 60 * 1000));
-
-        // Create question
-        const question = new Question({
-            title,
-            description,
-            nominees: createdNominees.map(n => n._id),
-            startTime,
-            endTime,
-            isActive: true
-        });
-
+        // Update question with nominee IDs
+        question.nominees = createdNominees.map(n => n._id);
         await question.save();
 
         // Populate nominees and return
         const populatedQuestion = await Question.findById(question._id)
             .populate('nominees');
 
+        // Count how many images are being processed
+        const processingCount = createdNominees.filter(n => !n.imageProcessed).length;
+
         res.status(201).json({
             success: true,
-            data: populatedQuestion
+            data: populatedQuestion,
+            message: processingCount > 0 
+                ? `Question created! ${processingCount} image(s) are being processed in the background.`
+                : 'Question created successfully!'
         });
+
     } catch (error) {
         console.error('Create question error:', error);
         
-        // Clean up uploaded files on error
+        // Clean up uploaded files on error (but don't cleanup queued files)
         if (req.files) {
             req.files.forEach(file => {
                 deleteFile(file.path);
@@ -103,7 +143,7 @@ export const createQuestion = async (req, res) => {
     }
 };
 
-// Update existing question with image uploads
+// Update existing question with queued image processing
 export const updateQuestion = async (req, res) => {
     try {
         console.log('Update question request body:', req.body);
@@ -157,7 +197,7 @@ export const updateQuestion = async (req, res) => {
             }
         });
 
-        // Create new nominees - preserve votes if nominee name matches
+        // Create new nominees with queue processing - preserve votes if nominee name matches
         const createdNominees = await Promise.all(
             parsedNominees.map(async (nominee, index) => {
                 // Find existing nominee with same name to preserve votes
@@ -167,7 +207,9 @@ export const updateQuestion = async (req, res) => {
 
                 const nomineeData = {
                     name: nominee.name.trim(),
-                    votes: existingNominee ? existingNominee.votes : 0 // Preserve votes
+                    votes: existingNominee ? existingNominee.votes : 0, // Preserve votes
+                    image: '/uploads/nominees/default-avatar.png', // Always start with default
+                    imageProcessed: true
                 };
 
                 // Check if there's an uploaded file for this nominee
@@ -176,15 +218,41 @@ export const updateQuestion = async (req, res) => {
                 );
 
                 if (imageFile) {
-                    nomineeData.image = `/uploads/nominees/${imageFile.filename}`;
-                } else if (existingNominee && existingNominee.image) {
+                    // Set as not processed and store temp path
+                    nomineeData.imageProcessed = false;
+                    nomineeData.tempImagePath = imageFile.path;
+                } else if (existingNominee && existingNominee.image && existingNominee.image !== '/uploads/nominees/default-avatar.png') {
                     // Keep existing image if no new image uploaded
                     nomineeData.image = existingNominee.image;
-                } else {
-                    nomineeData.image = '/uploads/nominees/default-avatar.png';
+                    nomineeData.imageProcessed = existingNominee.imageProcessed;
                 }
 
-                return new Nominee(nomineeData).save();
+                const createdNominee = await new Nominee(nomineeData).save();
+
+                // If there's an image file, add it to the processing queue
+                if (imageFile) {
+                    try {
+                        const job = await addImageProcessingJob(
+                            createdNominee._id,
+                            existingQuestion._id,
+                            imageFile.path,
+                            imageFile.originalname,
+                            1 // High priority for updates
+                        );
+
+                        // Update nominee with job ID for tracking
+                        await Nominee.findByIdAndUpdate(createdNominee._id, {
+                            imageJobId: job.id.toString()
+                        });
+
+                        console.log(`📥 Queued image processing for updated nominee: ${nominee.name}`);
+                    } catch (queueError) {
+                        console.error('Error adding image to queue:', queueError);
+                        // Don't fail the entire request if queue fails
+                    }
+                }
+
+                return createdNominee;
             })
         );
 
@@ -218,9 +286,15 @@ export const updateQuestion = async (req, res) => {
 
         console.log('Question updated successfully');
 
+        // Count how many images are being processed
+        const processingCount = createdNominees.filter(n => !n.imageProcessed).length;
+
         res.json({
             success: true,
-            data: updatedQuestion
+            data: updatedQuestion,
+            message: processingCount > 0 
+                ? `Question updated! ${processingCount} image(s) are being processed in the background.`
+                : 'Question updated successfully!'
         });
 
     } catch (error) {
@@ -380,6 +454,27 @@ export const getStatistics = async (req, res) => {
         res.status(500).json({
             success: false,
             error: error.message
+        });
+    }
+};
+
+// Get queue statistics
+export const getQueueStatus = async (req, res) => {
+    try {
+        const stats = await getQueueStats();
+        
+        res.json({
+            success: true,
+            data: {
+                queue: stats,
+                message: `${stats.waiting} jobs waiting, ${stats.active} jobs processing, ${stats.completed} completed, ${stats.failed} failed`
+            }
+        });
+    } catch (error) {
+        console.error('Queue status error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get queue status'
         });
     }
 };

@@ -8,6 +8,8 @@ import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import connectDatabase from './config/database.js';
+import redis from './config/redis.js';
+import imageQueue, { cleanupOldJobs } from './queues/imageQueue.js';
 import analyticsRoutes from './routes/analytics.js';
 import { generateSessionId, trackAction } from './middleware/analytics.js';
 import session from 'express-session';
@@ -25,23 +27,22 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const server = http.createServer(app);
 
+// Initialize Socket.IO
+const io = new Server(server, {
+    cors: {
+        origin: process.env.FRONTEND_URL || "*",
+        methods: ["GET", "POST"]
+    }
+});
+
+// Make io globally available for queue notifications
+global.io = io;
+
 // Trust proxy for nginx
 app.set('trust proxy', 1);
 
 // Frontend URL
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-// Socket.io setup
-const io = new Server(server, {
-    cors: {
-        origin: FRONTEND_URL,
-        methods: ["GET", "POST"],
-        credentials: true
-    }
-});
-
-// Connect to database
-connectDatabase();
 
 // Middleware
 app.use(helmet({
@@ -75,25 +76,29 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Socket.io connection handling
+// Connect to MongoDB
+connectDatabase();
+
+// Initialize Redis connection
+redis.connect().catch(console.error);
+
+// Clean up old queue jobs on startup
+setTimeout(cleanupOldJobs, 5000);
+
+// Socket.IO connection handling
 io.on('connection', (socket) => {
-    console.log('New client connected');
-
-    socket.on('joinRoom', (questionId) => {
-        socket.join(`question_${questionId}`);
-    });
-
-    socket.on('leaveRoom', (questionId) => {
-        socket.leave(`question_${questionId}`);
-    });
-
+    console.log('Client connected:', socket.id);
+    
     socket.on('disconnect', () => {
-        console.log('Client disconnected');
+        console.log('Client disconnected:', socket.id);
+    });
+    
+    // Admin can join a room to get queue updates
+    socket.on('join-admin', () => {
+        socket.join('admin');
+        console.log('Admin joined room:', socket.id);
     });
 });
-
-// Make io available in routes
-app.set('io', io);
 
 // Session middleware for analytics
 app.use(session({
@@ -177,4 +182,28 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, shutting down gracefully...');
+    
+    try {
+        // Close image queue
+        await imageQueue.close();
+        console.log('✅ Image queue closed');
+        
+        // Close Redis connection
+        redis.disconnect();
+        console.log('✅ Redis disconnected');
+        
+        // Close server
+        server.close(() => {
+            console.log('✅ Server closed');
+            process.exit(0);
+        });
+    } catch (error) {
+        console.error('❌ Error during shutdown:', error);
+        process.exit(1);
+    }
 }); 

@@ -11,10 +11,42 @@ window.MCA = {
     currentQuestionIndex: 0
 };
 
-// Initialize app
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing app...');
-    initializeApp();
+// Add Socket.IO connection for real-time updates
+let socket;
+
+// Initialize app when DOM is loaded
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize socket connection for real-time updates
+    if (typeof io !== 'undefined') {
+        socket = io(MCA.baseURL);
+        
+        socket.on('connect', () => {
+            console.log('Connected to server for real-time updates');
+            // Join admin room if user is admin
+            if (MCA.isAdmin) {
+                socket.emit('join-admin');
+            }
+        });
+        
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+        });
+        
+        // Listen for image processing completions
+        socket.on('imageProcessed', (data) => {
+            console.log('Image processed:', data);
+            handleImageProcessed(data);
+        });
+    }
+    
+    // Initialize theme
+    initializeTheme();
+    
+    // Load initial data
+    await initializeApp();
+    
+    // Check authentication
+    checkAuthAndRedirect();
 });
 
 function initializeApp() {
@@ -834,15 +866,12 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
     });
 
     try {
-        showLoading();
-        
-        // Fix: Use full URL
         const url = isEdit ? 
             `${MCA.baseURL}/admin/questions/${questionId}` : 
             `${MCA.baseURL}/admin/questions`;
         const method = isEdit ? 'PUT' : 'POST';
         
-        console.log('Making request to:', url); // Debug log
+        console.log('Making request to:', url);
         
         const response = await fetch(url, {
             method: method,
@@ -856,9 +885,19 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
         const data = await response.json();
 
         if (data.success) {
-            showToast(isEdit ? 'Question updated successfully!' : 'Question created successfully!', 'success');
+            // Show immediate success message
+            showToast(data.message || (isEdit ? 'Question updated successfully!' : 'Question created successfully!'), 'success');
+            
+            // Close modal and refresh questions list immediately
             closeQuestionModal();
             await loadAdminQuestions();
+            
+            // Show additional info about background processing if applicable
+            if (data.message && data.message.includes('processed in the background')) {
+                setTimeout(() => {
+                    showToast('💡 Images are being processed in the background. You\'ll see updates in real-time!', 'info');
+                }, 1500);
+            }
         } else {
             showToast(data.error || 'Operation failed', 'error');
         }
@@ -866,8 +905,64 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
     } catch (error) {
         console.error('Question submit error:', error);
         showToast('Network error occurred', 'error');
-    } finally {
-        hideLoading();
+    }
+}
+
+// Handle real-time image processing updates via Socket.IO
+function handleImageProcessed(data) {
+    console.log('Image processing completed:', data);
+    
+    const { nomineeId, questionId, imagePath } = data;
+    
+    // Update any visible nominee images in the UI
+    updateNomineeImageInUI(nomineeId, imagePath);
+    
+    // Show success notification
+    showToast(`✅ Nominee image processed successfully!`, 'success');
+    
+    // Refresh the current question display if we're viewing the updated question
+    if (MCA.allQuestions.length > 0) {
+        const currentQuestion = MCA.allQuestions[MCA.currentQuestionIndex];
+        if (currentQuestion && (currentQuestion.id === questionId || currentQuestion._id === questionId)) {
+            // Refresh questions to get updated data
+            loadAdminQuestions();
+        }
+    }
+}
+
+// Helper function to update nominee images in the UI
+function updateNomineeImageInUI(nomineeId, imagePath) {
+    // Find all nominee cards and update the matching one
+    const nomineeCards = document.querySelectorAll('.nominee-card-clean');
+    
+    nomineeCards.forEach(card => {
+        // Check if this card corresponds to the updated nominee
+        const img = card.querySelector('.nominee-avatar-img, .nominee-avatar img');
+        if (img) {
+            // Update the image source
+            img.src = `${MCA.staticURL}${imagePath}`;
+            
+            // Remove any processing indicators
+            const processingIndicator = card.querySelector('.processing-indicator');
+            if (processingIndicator) {
+                processingIndicator.remove();
+            }
+            
+            // Remove processing class if exists
+            img.classList.remove('processing');
+        }
+    });
+    
+    // Also update any images in results modals if open
+    const resultsModal = document.getElementById('resultsModal');
+    if (resultsModal && !resultsModal.classList.contains('hidden')) {
+        const modalImages = resultsModal.querySelectorAll('.nominee-avatar img, .nominee-avatar-small img, .legend-avatar img');
+        modalImages.forEach(img => {
+            // Simple check - could be enhanced with better nominee identification
+            if (img.src.includes('default-avatar.png')) {
+                img.src = `${MCA.staticURL}${imagePath}`;
+            }
+        });
     }
 }
 

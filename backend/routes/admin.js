@@ -1,12 +1,13 @@
 import express from 'express';
-import upload from '../middleware/upload.js';
+import tempUpload, { autoCleanupTempFiles } from '../middleware/tempUpload.js';
 import { 
     createQuestion, 
     updateQuestion, 
     updateQuestionStatus,
     getResults, 
     deleteQuestion, 
-    getStatistics 
+    getStatistics,
+    getQueueStatus
 } from '../controllers/adminController.js';
 import { authenticateToken, isAdmin } from '../middleware/auth.js';
 
@@ -16,11 +17,12 @@ const router = express.Router();
 router.use(authenticateToken);
 router.use(isAdmin);
 
-// Admin routes with file upload support - use .any() to handle dynamic field names
-router.post('/questions', upload.any(), createQuestion);
+// Admin routes with file upload support - use tempUpload for queue-based processing
+router.post('/questions', tempUpload.any(), autoCleanupTempFiles, createQuestion);
 router.get('/results', getResults);
 router.get('/statistics', getStatistics);
-router.put('/questions/:id', upload.any(), updateQuestion);
+router.get('/queue-status', getQueueStatus);
+router.put('/questions/:id', tempUpload.any(), autoCleanupTempFiles, updateQuestion);
 router.patch('/questions/:id/status', updateQuestionStatus);
 router.delete('/questions/:id', deleteQuestion);
 
