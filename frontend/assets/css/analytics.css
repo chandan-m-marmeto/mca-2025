@@ -5,6 +5,22 @@
     padding: 1rem;
 }
 
+/* Import Lato font for consistency */
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
+
+/* All headings should use Lato thin/hairline */
+h1, h2, h3, h4, h5, h6,
+.chart-header h3,
+.stat-content h3,
+.performance-details h4,
+.realtime-header h3,
+.engagement-card h3,
+.conversion-card h3,
+.analytics-error h2 {
+    font-family: 'Lato', sans-serif !important;
+    font-weight: 100 !important;
+}
+
 .analytics-overview {
     margin-bottom: 2rem;
 }
@@ -31,7 +47,7 @@
     transform: translateY(-2px);
 }
 
-.stat-card.primary { border-left: 4px solid #4f46e5; }
+.stat-card.primary { border-left: 4px solid #1067AD; }
 .stat-card.success { border-left: 4px solid #10b981; }
 .stat-card.warning { border-left: 4px solid #f59e0b; }
 .stat-card.info { border-left: 4px solid #3b82f6; }
@@ -44,7 +60,7 @@
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: #1067AD;
     color: white;
 }
 
@@ -142,7 +158,7 @@
 }
 
 .performance-rank {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: #1067AD;
     color: white;
     width: 40px;
     height: 40px;
@@ -186,7 +202,7 @@
 .mini-chart {
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, #e2e8f0 0%, #4f46e5 100%);
+    background: linear-gradient(90deg, #e2e8f0 0%, #1067AD 100%);
     border-radius: 4px;
     position: relative;
     overflow: hidden;

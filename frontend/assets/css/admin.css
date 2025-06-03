@@ -219,7 +219,7 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: #1067AD;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -260,7 +260,7 @@
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    background: #1067AD;
     transition: width 0.3s ease;
 }
 
@@ -450,8 +450,8 @@
 }
 
 .results-stats .stat-card.highlight {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3)) !important;
-    border-color: rgba(99, 102, 241, 0.5) !important;
+    background: linear-gradient(135deg, rgba(16, 103, 173, 0.3), rgba(16, 103, 173, 0.2)) !important;
+    border-color: rgba(16, 103, 173, 0.5) !important;
 }
 
 .results-stats .stat-card.highlight .stat-number {
@@ -556,7 +556,7 @@
 
 .result-progress {
     height: 100%;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    background: #1067AD;
     transition: width 0.5s ease;
     border-radius: 10px;
 }
@@ -699,7 +699,7 @@
     width: 45px;
     height: 45px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: #1067AD;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -947,7 +947,7 @@
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+    background: #1067AD;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1202,7 +1202,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #1067AD !important;
     color: white;
     font-weight: bold;
     border-radius: 50%;
@@ -1253,4 +1253,19 @@
     height: 30px;
     border-radius: 50%;
     object-fit: cover;
+}
+
+/* All headings should use Lato thin/hairline */
+h1, h2, h3, h4, h5, h6,
+.question-title,
+.page-title,
+.sidebar-title,
+.memories-header h2,
+.results-header .question-title,
+.nominees-container h3,
+.results-details h3,
+.results-chart h3,
+.nominees-overview h3 {
+    font-family: 'Lato', sans-serif !important;
+    font-weight: 100 !important;
 } 
