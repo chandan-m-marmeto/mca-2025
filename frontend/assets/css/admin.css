@@ -2,12 +2,12 @@
 .admin-layout {
     display: flex;
     height: 100vh;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    background: #000000;
 }
 
 .sidebar {
     width: 280px;
-    background: rgba(25, 30, 45, 0.95);
+    background: rgba(0, 0, 0, 0.95);
     backdrop-filter: blur(10px);
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
@@ -21,7 +21,8 @@
 
 .sidebar-title {
     font-size: 1.5rem;
-    font-weight: 700;
+    font-weight: 100;
+    font-family: 'Lato', sans-serif;
     color: #fff;
     margin-bottom: 0.5rem;
 }
@@ -29,6 +30,7 @@
 .sidebar-subtitle {
     color: rgba(255, 255, 255, 0.7);
     font-size: 0.9rem;
+    font-family: 'Lato', sans-serif;
 }
 
 .nav-menu {
@@ -46,6 +48,7 @@
     border: none;
     color: rgba(255, 255, 255, 0.7);
     font-size: 1rem;
+    font-family: 'Lato', sans-serif;
     cursor: pointer;
     transition: all 0.3s ease;
     text-align: left;
@@ -58,7 +61,7 @@
 }
 
 .nav-link.active {
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    background: #1067AD;
     color: #fff;
     border-left: 4px solid #fff;
 }
@@ -76,12 +79,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(0, 0, 0, 0.5);
 }
 
 .page-title {
     font-size: 1.75rem;
-    font-weight: 600;
+    font-weight: 100;
+    font-family: 'Lato', sans-serif;
     color: #fff;
 }
 
@@ -98,11 +102,11 @@
 }
 
 .question-display {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(10px);
     border-radius: 16px;
     padding: 2rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .question-header {
@@ -114,7 +118,8 @@
 
 .question-title {
     font-size: 1.5rem;
-    font-weight: 600;
+    font-weight: 100;
+    font-family: 'Lato', sans-serif;
     color: #fff;
     margin: 0;
 }
@@ -123,7 +128,8 @@
     padding: 0.5rem 1rem;
     border-radius: 20px;
     font-size: 0.85rem;
-    font-weight: 600;
+    font-weight: 400;
+    font-family: 'Lato', sans-serif;
     text-transform: uppercase;
 }
 
@@ -148,10 +154,11 @@
 
 .meta-item {
     padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.5);
     border-radius: 8px;
     color: rgba(255, 255, 255, 0.8);
     font-size: 0.9rem;
+    font-family: 'Lato', sans-serif;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -161,8 +168,15 @@
     margin-bottom: 2rem;
 }
 
+.question-description h3 {
+    color: #fff;
+    font-weight: 100;
+    font-family: 'Lato', sans-serif;
+}
+
 .question-description p {
     color: rgba(255, 255, 255, 0.8);
+    font-family: 'Lato', sans-serif;
     line-height: 1.6;
 }
 
@@ -170,6 +184,8 @@
     color: #fff;
     margin-bottom: 1rem;
     font-size: 1.2rem;
+    font-weight: 100;
+    font-family: 'Lato', sans-serif;
 }
 
 .nominees-grid {
@@ -180,15 +196,16 @@
 }
 
 .nominee-card {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.6);
     border-radius: 12px;
     padding: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     transition: transform 0.2s ease;
 }
 
 .nominee-card:hover {
     transform: translateY(-2px);
+    border-color: #1067AD;
 }
 
 .nominee-info {
