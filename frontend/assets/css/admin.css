@@ -28,12 +28,12 @@
 }
 
 .sidebar-logo img {
-    width: 80px;
-    height: 80px;
+    width: 120px;
+    height: 120px;
     object-fit: contain;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.05);
-    padding: 10px;
+    padding: 15px;
     transition: transform 0.3s ease;
 }
 
@@ -52,17 +52,15 @@
 }
 
 .sidebar-title {
-    font-size: 1.5rem;
-    font-weight: 100;
-    font-family: 'Lato', sans-serif;
-    color: #fff;
-    margin-bottom: 0.5rem;
+    display: none;
 }
 
 .sidebar-subtitle {
+    text-align: center;
     color: rgba(255, 255, 255, 0.7);
     font-size: 0.9rem;
     font-family: 'Lato', sans-serif;
+    margin-top: 0.5rem;
 }
 
 .nav-menu {

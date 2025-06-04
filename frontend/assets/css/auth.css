@@ -41,15 +41,15 @@
 .auth-logo {
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
-    min-height: 60px;
+    margin-bottom: 30px;
+    min-height: 80px;
     align-items: center;
 }
 
 .auth-logo img {
-    max-width: 200px;
+    max-width: 280px;
     height: auto;
-    max-height: 60px;
+    max-height: 80px;
     object-fit: contain;
     filter: brightness(1);
 }
