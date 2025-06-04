@@ -135,8 +135,8 @@ function displayCurrentUserQuestion() {
                 ${safeQuestion.nominees.map(nominee => {
                     const nomineeId = nominee.id || nominee._id;
                     const nomineeName = nominee.name || 'Unknown';
-                    // Use the actual nominee image URL from the database
-                    const imageUrl = `https://mca2025.marmeto.com/uploads/nominees/nominee-${nomineeId}.jpeg`;
+                    // Use the exact server path and correct file extension (.JPG)
+                    const imageUrl = `/uploads/nominees/nominee-${nomineeId}.JPG`;
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
