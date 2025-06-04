@@ -124,8 +124,8 @@ function displayCurrentUserQuestion() {
         <div class="question-container">
             <!-- Question Header -->
             <div class="question-header">
-                <h2 class="question-title">${safeQuestion.title}</h2>
-                <p class="question-description">${safeQuestion.description}</p>
+                <div class="question-title">${safeQuestion.title}</div>
+                <div class="question-description">${safeQuestion.description}</div>
             </div>
             
             <!-- Nominees Grid -->
@@ -142,15 +142,12 @@ function displayCurrentUserQuestion() {
                                 <img src="${nominee.image || '/assets/images/avatar.png'}" 
                                      alt="${nominee.name}" 
                                      class="nominee-avatar-img"
-                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                <div class="nominee-initial-avatar" style="display:none;">${nominee.name.charAt(0).toUpperCase()}</div>
+                                     onerror="this.src='/assets/images/avatar.png'">
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
                             </div>
-                            <div class="selection-indicator">
-                                <i class="fas fa-check"></i>
-                            </div>
+                            ${hasVoted === nomineeId ? '<div class="selected-indicator">✓</div>' : ''}
                         </div>
                     `;
                 }).join('')}
@@ -191,34 +188,49 @@ function displayCurrentUserQuestion() {
                 max-width: 1200px;
                 margin: 0 auto;
                 padding: 20px;
+                position: relative;
             }
 
             .question-header {
                 text-align: center;
                 margin-bottom: 40px;
+                position: relative;
+            }
+
+            .question-header::before {
+                content: '';
+                position: absolute;
+                top: -20px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 100%;
+                height: 1px;
+                background: rgba(255, 255, 255, 0.1);
             }
 
             .question-title {
-                font-size: 28px;
+                font-size: 32px;
                 font-weight: bold;
                 color: #fff;
-                margin-bottom: 10px;
+                margin-bottom: 15px;
             }
 
             .question-description {
                 font-size: 16px;
                 color: rgba(255, 255, 255, 0.8);
+                max-width: 800px;
+                margin: 0 auto;
             }
 
             .nominees-grid {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
-                margin: 20px 0 40px;
+                gap: 30px;
+                margin: 40px 0;
             }
 
             .nominee-card {
-                background: rgba(255, 255, 255, 0.1);
+                background: rgba(255, 255, 255, 0.05);
                 border-radius: 10px;
                 padding: 20px;
                 display: flex;
@@ -226,15 +238,17 @@ function displayCurrentUserQuestion() {
                 align-items: center;
                 cursor: pointer;
                 transition: all 0.3s ease;
+                position: relative;
+                border: 2px solid transparent;
             }
 
             .nominee-card:hover {
-                background: rgba(255, 255, 255, 0.15);
+                background: rgba(255, 255, 255, 0.1);
             }
 
             .nominee-card.selected {
-                background: rgba(255, 255, 255, 0.2);
-                border: 2px solid #fff;
+                border-color: #fff;
+                background: rgba(255, 255, 255, 0.15);
             }
 
             .nominee-avatar {
@@ -258,6 +272,21 @@ function displayCurrentUserQuestion() {
                 margin: 10px 0;
             }
 
+            .selected-indicator {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: #4CAF50;
+                color: white;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 14px;
+            }
+
             .vote-button-container {
                 text-align: center;
                 margin: 30px 0;
@@ -274,7 +303,7 @@ function displayCurrentUserQuestion() {
                 transition: background 0.3s ease;
             }
 
-            .btn-primary:hover {
+            .btn-primary:hover:not(.btn-disabled) {
                 background: #45a049;
             }
 
@@ -287,6 +316,7 @@ function displayCurrentUserQuestion() {
                 display: flex;
                 justify-content: center;
                 gap: 20px;
+                margin-top: 20px;
             }
 
             .nav-btn {
