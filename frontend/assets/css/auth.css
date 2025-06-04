@@ -42,6 +42,8 @@
     display: flex;
     justify-content: center;
     margin-bottom: 20px;
+    min-height: 60px;
+    align-items: center;
 }
 
 .auth-logo img {
@@ -53,18 +55,18 @@
 }
 
 /* Fallback text logo when image is not available */
-.auth-logo::after {
+.auth-logo::before {
     content: "🏆 MCA";
-    font-size: 24px;
+    font-size: 32px;
     color: #1067AD;
-    font-weight: 100;
+    font-weight: 300;
     font-family: 'Lato', sans-serif;
-    display: none;
+    letter-spacing: -0.02em;
 }
 
-.auth-logo img[style*="display: none"] + .auth-logo::after,
-.auth-logo:empty::after {
-    display: block;
+/* Hide the before element when image is present */
+.auth-logo img:not([style*="display: none"]) ~ .auth-logo::before {
+    display: none;
 }
 
 .auth-title {

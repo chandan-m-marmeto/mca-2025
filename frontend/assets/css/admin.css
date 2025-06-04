@@ -23,37 +23,48 @@
 .sidebar-logo {
     display: flex;
     justify-content: center;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 0.5rem;
 }
 
 .sidebar-logo img {
-    width: 50px;
-    height: 50px;
+    width: 80px;
+    height: 80px;
     object-fit: contain;
-    border-radius: 8px;
+    border-radius: 12px;
     background: rgba(255, 255, 255, 0.05);
-    padding: 8px;
+    padding: 10px;
+    transition: transform 0.3s ease;
+}
+
+.sidebar-logo img:hover {
+    transform: scale(1.05);
 }
 
 /* Fallback text logo when image is not available */
-.sidebar-logo::after {
+.sidebar-logo::before {
     content: "🏆";
-    font-size: 32px;
+    font-size: 42px;
     color: #1067AD;
-    font-weight: 100;
+    font-weight: 300;
     font-family: 'Lato', sans-serif;
-    display: none;
-    width: 50px;
-    height: 50px;
-    border-radius: 8px;
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
     background: rgba(255, 255, 255, 0.05);
-    line-height: 50px;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
 }
 
-.sidebar-logo img[style*="display: none"] + .sidebar-logo::after,
-.sidebar-logo:empty::after {
-    display: block;
+.sidebar-logo::before:hover {
+    transform: scale(1.05);
+}
+
+/* Hide the before element when image is present */
+.sidebar-logo img:not([style*="display: none"]) ~ .sidebar-logo::before {
+    display: none;
 }
 
 .sidebar-title {
