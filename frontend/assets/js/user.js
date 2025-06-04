@@ -41,44 +41,13 @@ function displayNoQuestionsState() {
     if (container) {
         container.innerHTML = `
             <div class="no-questions-state">
-                <div class="mca-memories">
-                    <div class="memories-header">
-                        <h2>🏆 MCA Memories</h2>
-                        <p>While we prepare for MCA 2025, take a look at some highlights from previous years!</p>
-                    </div>
-                    <div class="memories-gallery">
-                        <div class="memory-card">
-                            <div class="memory-image">
-                                <div class="placeholder-image">🎉</div>
-                            </div>
-                            <h3>MCA 2024 Winners</h3>
-                            <p>Celebrating our amazing team achievements</p>
-                        </div>
-                        <div class="memory-card">
-                            <div class="memory-image">
-                                <div class="placeholder-image">🏅</div>
-                            </div>
-                            <h3>Best Innovation</h3>
-                            <p>Recognizing groundbreaking solutions</p>
-                        </div>
-                        <div class="memory-card">
-                            <div class="memory-image">
-                                <div class="placeholder-image">👥</div>
-                            </div>
-                            <h3>Team Spirit</h3>
-                            <p>Honoring collaboration and teamwork</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="no-voting-message">
-                    <div class="empty-state">
-                        <div class="empty-icon">🗳️</div>
-                        <h3>No Active Voting Questions</h3>
-                        <p>There are no active voting questions at the moment. Please check back later when voting opens!</p>
-                        <button class="btn btn-primary" onclick="loadUserQuestions()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
-                    </div>
+                <div class="empty-state">
+                    <div class="empty-icon">🗳️</div>
+                    <h3>No Questions Available</h3>
+                    <p>There are no questions available for voting at the moment.</p>
+                    <button class="btn btn-primary" onclick="loadUserQuestions()">
+                        Refresh
+                    </button>
                 </div>
             </div>
         `;
@@ -115,103 +84,45 @@ function displayCurrentUserQuestion() {
         id: question.id || question._id,
         title: question.title || 'Untitled Question',
         description: question.description || '',
-        endTime: question.endTime || new Date().toISOString(),
         nominees: Array.isArray(question.nominees) ? question.nominees : []
     };
     
-    const timeRemaining = getTimeRemaining(safeQuestion.endTime);
     const hasVoted = userVotes[safeQuestion.id];
-    
+
     questionsContainer.innerHTML = `
-        <div class="question-container">
-            <!-- Question Header -->
+        <div class="question-card">
             <div class="question-header">
-                <div class="question-meta">
-                    <span class="question-number">${currentQuestionIndex + 1} of ${currentQuestions.length}</span>
-                    <span class="time-remaining">
-                        <i class="fas fa-clock"></i> ${timeRemaining}
-                    </span>
-                </div>
-                <h2 class="question-title">${safeQuestion.title}</h2>
-                <p class="question-description">${safeQuestion.description}</p>
+                <h2>${safeQuestion.title}</h2>
             </div>
-            
-            <!-- Nominees Grid -->
+
+            <div class="question-description">
+                <p>${safeQuestion.description}</p>
+            </div>
+
             <div class="nominees-grid">
-                ${safeQuestion.nominees.map(nominee => {
-                    const nomineeId = nominee.id || nominee._id;
-                    const nomineeName = nominee.name || 'Unknown';
-                    const nomineeVotes = nominee.votes || 0;
-                    
-                    // Fix image path - use proper base URL
-                    const getImageUrl = (image) => {
-                        if (!image || image === null) {
-                            return null;
+                ${safeQuestion.nominees.map(nominee => `
+                    <div class="nominee-card ${hasVoted ? 'voted' : ''}">
+                        <img src="${nominee.image || '/assets/images/avatar.png'}" alt="${nominee.name}" class="nominee-image">
+                        <h3>${nominee.name}</h3>
+                        <p>${nominee.department || ''}</p>
+                        ${!hasVoted ? 
+                            `<button onclick="castVote('${safeQuestion.id}', '${nominee._id}')" class="vote-button">
+                                Vote 🗳️
+                            </button>` : 
+                            '<span class="voted-badge">Voted ✓</span>'
                         }
-                        return `${MCA.staticURL}${image}`;
-                    };
-                    
-                    return `
-                        <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
-                             data-nominee-id="${nomineeId}"
-                             onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
-                            <div class="nominee-avatar">
-                                ${getImageUrl(nominee.image) ? 
-                                    `<img src="${getImageUrl(nominee.image)}" 
-                                          alt="${nominee.name}" 
-                                          class="nominee-avatar-img"
-                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                     <div class="nominee-initial-avatar" style="display:none;">${nominee.name.charAt(0).toUpperCase()}</div>` :
-                                    `<div class="nominee-initial-avatar">${nominee.name.charAt(0).toUpperCase()}</div>`
-                                }
-                            </div>
-                            <div class="nominee-info">
-                                <h3 class="nominee-name">${nomineeName}</h3>
-                                <div class="nominee-votes">
-                                    <i class="fas fa-vote-yea"></i>
-                                    <span>${nomineeVotes} votes</span>
-                                </div>
-                            </div>
-                            <div class="selection-indicator">
-                                <i class="fas fa-check"></i>
-                            </div>
-                        </div>
-                    `;
-                }).join('')}
+                    </div>
+                `).join('')}
             </div>
-            
-            <!-- Action Buttons -->
-            <div class="question-actions">
-                <div class="navigation-buttons">
-                    <button class="btn btn-secondary" 
-                            onclick="previousUserQuestion()" 
-                            ${currentQuestionIndex === 0 ? 'disabled' : ''}>
-                        <i class="fas fa-chevron-left"></i> Previous
-                    </button>
-                    <button class="btn btn-secondary" 
-                            onclick="nextUserQuestion()" 
-                            ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}>
-                        <i class="fas fa-chevron-right"></i> Next
-                    </button>
-                </div>
-                
-                <div class="vote-button">
-                    <button class="btn btn-primary ${hasVoted ? 'btn-success' : ''}" 
-                            id="submitVoteBtn"
-                            onclick="submitCurrentVote()"
-                            ${!userVotes[safeQuestion.id] ? 'disabled' : ''}>
-                        <i class="fas fa-${hasVoted ? 'check' : 'vote-yea'}"></i>
-                        ${hasVoted ? 'Vote Submitted' : 'Submit Vote'}
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Progress Bar -->
-            <div class="progress-container">
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${((currentQuestionIndex + 1) / currentQuestions.length) * 100}%"></div>
-                </div>
-                <span class="progress-text">${currentQuestionIndex + 1} of ${currentQuestions.length} questions</span>
+
+            <div class="pagination">
+                <button onclick="previousQuestion()" ${currentQuestionIndex === 0 ? 'disabled' : ''}>
+                    ← Previous
+                </button>
+                <span>${currentQuestionIndex + 1} of ${currentQuestions.length}</span>
+                <button onclick="nextQuestion()" ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}>
+                    Next →
+                </button>
             </div>
         </div>
     `;

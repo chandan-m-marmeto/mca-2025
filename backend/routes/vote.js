@@ -6,22 +6,20 @@ import User from '../models/User.js';
 
 const router = express.Router();
 
-// Get all active questions (more flexible filtering)
+// Get all active questions
 router.get('/questions', auth, async (req, res) => {
   try {
     const now = new Date();
     
-    // Get questions that are active (less strict time filtering for demo)
+    // Only return currently active questions
     const questions = await Question.find({
-      isActive: true
-      // Remove strict time filtering to show all active questions
-      // startTime: { $lte: now },
-      // endTime: { $gte: now }
+      isActive: true,
+      startTime: { $lte: now },
+      endTime: { $gte: now }
     }).populate('nominees').sort({ createdAt: -1 });
     
     console.log(`Found ${questions.length} active questions`);
     
-    // Return in the format frontend expects
     res.json({ 
       success: true,
       questions: questions 
@@ -34,6 +32,18 @@ router.get('/questions', auth, async (req, res) => {
     });
   }
 });
+
+// Helper function to get question status
+const getQuestionStatus = (question) => {
+  const now = new Date();
+  const start = new Date(question.startTime);
+  const end = new Date(question.endTime);
+
+  if (!question.isActive) return 'inactive';
+  if (now < start) return 'scheduled';
+  if (now > end) return 'expired';
+  return 'active';
+};
 
 // Submit a vote
 router.post('/submit', auth, async (req, res) => {
