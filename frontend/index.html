@@ -123,7 +123,6 @@
                 </div>
                 <button class="btn btn-secondary" id="userLogout">Logout</button>
             </div>
-            <div class="header-line"></div>
         </div>
         
         <div class="voting-container">
@@ -147,6 +146,7 @@
             background: #000;
             position: relative;
             z-index: 10;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         .header-content {
@@ -167,8 +167,8 @@
         }
 
         .logo {
-            width: 40px;
-            height: 40px;
+            width: 80px;
+            height: 80px;
             z-index: 1;
         }
 
@@ -178,16 +178,9 @@
             object-fit: contain;
         }
 
-        .header-line {
-            height: 1px;
-            background: rgba(255, 255, 255, 0.2);
-            margin-top: 20px;
-            width: 100%;
-        }
-
         .user-title {
             color: #fff;
-            font-size: 24px;
+            font-size: 28px;
             margin: 0;
             white-space: nowrap;
         }
@@ -212,6 +205,11 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 40px 20px;
+        }
+
+        /* Remove any blue lines from the container */
+        .user-container {
+            background: #000;
         }
     </style>
 

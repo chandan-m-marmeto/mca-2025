@@ -124,8 +124,10 @@ function displayCurrentUserQuestion() {
         <div class="question-container">
             <!-- Question Header -->
             <div class="question-header">
-                <div class="question-title">${safeQuestion.title}</div>
-                <div class="question-description">${safeQuestion.description}</div>
+                <div class="question-content">
+                    <h1 class="question-title">${safeQuestion.title}</h1>
+                    <p class="question-description">${safeQuestion.description}</p>
+                </div>
             </div>
             
             <!-- Nominees Grid -->
@@ -133,16 +135,17 @@ function displayCurrentUserQuestion() {
                 ${safeQuestion.nominees.map(nominee => {
                     const nomineeId = nominee.id || nominee._id;
                     const nomineeName = nominee.name || 'Unknown';
+                    // Use the actual nominee image URL from the database
+                    const imageUrl = `https://mca2025.marmeto.com/uploads/nominees/nominee-${nomineeId}.jpeg`;
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
                              data-nominee-id="${nomineeId}"
                              onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
                             <div class="nominee-avatar">
-                                <img src="${nominee.image || '/assets/images/avatar.png'}" 
+                                <img src="${imageUrl}" 
                                      alt="${nominee.name}" 
-                                     class="nominee-avatar-img"
-                                     onerror="this.src='/assets/images/avatar.png'">
+                                     class="nominee-avatar-img">
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
@@ -194,32 +197,26 @@ function displayCurrentUserQuestion() {
             .question-header {
                 text-align: center;
                 margin-bottom: 40px;
-                position: relative;
+                padding-top: 20px;
             }
 
-            .question-header::before {
-                content: '';
-                position: absolute;
-                top: -20px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 100%;
-                height: 1px;
-                background: rgba(255, 255, 255, 0.1);
+            .question-content {
+                max-width: 800px;
+                margin: 0 auto;
             }
 
             .question-title {
-                font-size: 32px;
-                font-weight: bold;
+                font-size: 42px;
+                font-weight: 500;
                 color: #fff;
-                margin-bottom: 15px;
+                margin-bottom: 20px;
+                line-height: 1.2;
             }
 
             .question-description {
-                font-size: 16px;
+                font-size: 18px;
                 color: rgba(255, 255, 255, 0.8);
-                max-width: 800px;
-                margin: 0 auto;
+                line-height: 1.5;
             }
 
             .nominees-grid {
@@ -257,6 +254,7 @@ function displayCurrentUserQuestion() {
                 border-radius: 10px;
                 overflow: hidden;
                 margin-bottom: 15px;
+                background: rgba(255, 255, 255, 0.1);
             }
 
             .nominee-avatar-img {
@@ -266,7 +264,7 @@ function displayCurrentUserQuestion() {
             }
 
             .nominee-name {
-                font-size: 18px;
+                font-size: 24px;
                 color: #fff;
                 text-align: center;
                 margin: 10px 0;
