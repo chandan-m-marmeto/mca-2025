@@ -90,42 +90,188 @@ function displayCurrentUserQuestion() {
     const hasVoted = userVotes[safeQuestion.id];
 
     questionsContainer.innerHTML = `
-        <div class="question-card">
+        <div class="voting-container">
             <div class="question-header">
-                <h2>${safeQuestion.title}</h2>
-            </div>
-
-            <div class="question-description">
-                <p>${safeQuestion.description}</p>
+                <h2 class="question-title">${safeQuestion.title}</h2>
+                <p class="question-description">${safeQuestion.description}</p>
             </div>
 
             <div class="nominees-grid">
                 ${safeQuestion.nominees.map(nominee => `
-                    <div class="nominee-card ${hasVoted ? 'voted' : ''}">
-                        <img src="${nominee.image || '/assets/images/avatar.png'}" alt="${nominee.name}" class="nominee-image">
-                        <h3>${nominee.name}</h3>
-                        <p>${nominee.department || ''}</p>
-                        ${!hasVoted ? 
-                            `<button onclick="castVote('${safeQuestion.id}', '${nominee._id}')" class="vote-button">
-                                Vote 🗳️
-                            </button>` : 
-                            '<span class="voted-badge">Voted ✓</span>'
-                        }
+                    <div class="nominee-card">
+                        <div class="nominee-image-container">
+                            <img src="${nominee.image || '/assets/images/avatar.png'}" 
+                                 alt="${nominee.name}" 
+                                 class="nominee-image"
+                                 onerror="this.src='/assets/images/avatar.png'">
+                        </div>
+                        <div class="nominee-details">
+                            <h3 class="nominee-name">${nominee.name}</h3>
+                            ${nominee.department ? `<p class="nominee-department">${nominee.department}</p>` : ''}
+                        </div>
+                        <div class="vote-action">
+                            ${!hasVoted ? 
+                                `<button onclick="castVote('${safeQuestion.id}', '${nominee._id}')" class="vote-button">
+                                    Vote
+                                </button>` : 
+                                `<div class="voted-indicator">Voted ✓</div>`
+                            }
+                        </div>
                     </div>
                 `).join('')}
             </div>
 
-            <div class="pagination">
-                <button onclick="previousQuestion()" ${currentQuestionIndex === 0 ? 'disabled' : ''}>
+            <div class="pagination-controls">
+                <button class="nav-button ${currentQuestionIndex === 0 ? 'disabled' : ''}"
+                        onclick="previousQuestion()" 
+                        ${currentQuestionIndex === 0 ? 'disabled' : ''}>
                     ← Previous
                 </button>
-                <span>${currentQuestionIndex + 1} of ${currentQuestions.length}</span>
-                <button onclick="nextQuestion()" ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}>
+                <span class="page-indicator">
+                    ${currentQuestionIndex + 1} of ${currentQuestions.length}
+                </span>
+                <button class="nav-button ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}"
+                        onclick="nextQuestion()" 
+                        ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}>
                     Next →
                 </button>
             </div>
         </div>
     `;
+
+    // Add CSS if not already present
+    if (!document.getElementById('voting-styles')) {
+        const styles = document.createElement('style');
+        styles.id = 'voting-styles';
+        styles.textContent = `
+            .voting-container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+
+            .question-header {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+
+            .question-title {
+                font-size: 24px;
+                color: #333;
+                margin-bottom: 10px;
+            }
+
+            .question-description {
+                color: #666;
+                font-size: 16px;
+            }
+
+            .nominees-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                margin: 20px 0;
+            }
+
+            .nominee-card {
+                background: #fff;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                overflow: hidden;
+                transition: transform 0.2s;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 20px;
+            }
+
+            .nominee-card:hover {
+                transform: translateY(-5px);
+            }
+
+            .nominee-image-container {
+                width: 200px;
+                height: 200px;
+                margin-bottom: 15px;
+                border-radius: 10px;
+                overflow: hidden;
+            }
+
+            .nominee-image {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+            .nominee-details {
+                text-align: center;
+                margin-bottom: 15px;
+            }
+
+            .nominee-name {
+                font-size: 18px;
+                color: #333;
+                margin-bottom: 5px;
+            }
+
+            .nominee-department {
+                color: #666;
+                font-size: 14px;
+            }
+
+            .vote-button {
+                background: #4CAF50;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+                transition: background 0.2s;
+            }
+
+            .vote-button:hover {
+                background: #45a049;
+            }
+
+            .voted-indicator {
+                color: #4CAF50;
+                font-weight: bold;
+            }
+
+            .pagination-controls {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 20px;
+                margin-top: 30px;
+            }
+
+            .nav-button {
+                background: #f0f0f0;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+
+            .nav-button:not(.disabled):hover {
+                background: #e0e0e0;
+            }
+
+            .nav-button.disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            .page-indicator {
+                font-size: 16px;
+                color: #666;
+            }
+        `;
+        document.head.appendChild(styles);
+    }
 }
 
 function selectNominee(questionId, nomineeId) {
