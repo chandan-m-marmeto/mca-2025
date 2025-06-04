@@ -20,45 +20,16 @@ body:has(#user-dashboard:not(.hidden)) {
 .user-container .user-header {
     position: relative;
     text-align: center;
-    padding: 40px 20px 20px;
+    padding: 25px 20px;
     margin-bottom: 0;
     background: rgba(16, 103, 173, 0.1);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.user-container .user-logo {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 1rem;
-}
-
-.user-container .user-logo img {
-    width: 160px;
-    height: 160px;
-    object-fit: contain;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 15px;
-    transition: transform 0.3s ease;
-}
-
-.user-container .user-logo img:hover {
-    transform: scale(1.05);
-}
-
-/* Fallback text logo when image is not available */
+.user-container .user-logo,
+.user-container .user-logo img,
 .user-container .user-logo::after {
-    content: "🏆 MCA 2025";
-    font-size: 20px;
-    color: #1067AD;
-    font-weight: 100;
-    font-family: 'Lato', sans-serif;
     display: none;
-}
-
-.user-container .user-logo img[style*="display: none"] + .user-logo::after,
-.user-container .user-logo:empty::after {
-    display: block;
 }
 
 .user-container .user-header::before {
@@ -79,12 +50,13 @@ body:has(#user-dashboard:not(.hidden)) {
 }
 
 .user-container .user-title {
-    font-size: 2rem;
+    font-size: 2.2rem;
     font-weight: 100;
     color: #fff;
     margin: 0;
     text-align: center;
     font-family: 'Lato', sans-serif;
+    letter-spacing: -0.02em;
 }
 
 .user-container .user-subtitle {
@@ -98,8 +70,10 @@ body:has(#user-dashboard:not(.hidden)) {
 /* PREMIUM LOGOUT BUTTON */
 .user-container .user-header .btn {
     position: absolute;
-    top: 20px;
+    top: 50%;
     right: 20px;
+    transform: translateY(-50%);
+    margin: 0;
     background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -526,13 +500,19 @@ body:has(#user-dashboard:not(.hidden)) {
 /* RESPONSIVE DESIGN */
 @media (max-width: 768px) {
     .user-container .user-header {
-        padding: 30px 15px 15px;
+        padding: 20px 15px;
     }
     
     .user-container .user-header .btn {
-        position: static;
-        margin: 0 auto 20px;
-        display: inline-flex;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 15px;
+    }
+    
+    .user-container .user-title {
+        font-size: 1.8rem;
+        padding-right: 100px; /* Make space for logout button */
     }
     
     .user-container .voting-container {
