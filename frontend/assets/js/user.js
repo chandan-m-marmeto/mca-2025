@@ -154,8 +154,9 @@ function displayCurrentUserQuestion() {
                         fullData: nominee
                     });
                     
-                    // Construct image URL using the correct format
-                    const imageUrl = `${MCA.staticURL}/uploads/nominees/nominee-${nomineeId}.JPG`;
+                    // Get shortened ID for image URL (first 7 chars)
+                    const shortId = nomineeId.substring(0, 7);
+                    const imageUrl = `${MCA.staticURL}/uploads/nominees/nominee-${shortId}...JPG`;
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
@@ -165,7 +166,7 @@ function displayCurrentUserQuestion() {
                                 <img src="${imageUrl}" 
                                      alt="${nominee.name}" 
                                      class="nominee-avatar-img"
-                                     onerror="console.error('Failed to load image for nominee:', '${nomineeName}', 'URL:', this.src)">
+                                     onerror="handleImageError(this, '${nomineeName}')">
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
@@ -483,4 +484,16 @@ function getTimeRemaining(endTime) {
 function loadUserProfile() {
     // Implementation for user profile loading
     console.log('Loading user profile...');
+}
+
+// Handle image loading errors
+function handleImageError(img, nomineeName) {
+    console.error('Failed to load image for nominee:', nomineeName, 'URL:', img.src);
+    
+    // Set a default avatar or placeholder
+    img.src = `${MCA.staticURL}/assets/images/default-avatar.png`;
+    img.onerror = null; // Prevent infinite error loop if default image also fails
+    
+    // Add a class to style the failed image container
+    img.parentElement.classList.add('image-load-failed');
 }
