@@ -135,20 +135,19 @@ function displayCurrentUserQuestion() {
                 ${safeQuestion.nominees.map(nominee => {
                     const nomineeId = nominee.id || nominee._id;
                     const nomineeName = nominee.name || 'Unknown';
-                    // Use the image path from the nominee object
-                    const imageUrl = nominee.image ? `${MCA.staticURL}${nominee.image}` : null;
+                    
+                    // Get the full image path from nominee data
+                    const imageUrl = `/uploads/nominees/${nominee.image.split('/').pop()}`;
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
                              data-nominee-id="${nomineeId}"
                              onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
                             <div class="nominee-avatar">
-                                ${imageUrl ? 
-                                    `<img src="${imageUrl}" 
-                                          alt="${nominee.name}" 
-                                          class="nominee-avatar-img">` :
-                                    `<div class="nominee-initial">${nominee.name.charAt(0).toUpperCase()}</div>`
-                                }
+                                <img src="${imageUrl}" 
+                                     alt="${nominee.name}" 
+                                     class="nominee-avatar-img"
+                                     onerror="this.className += ' image-error'">
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
