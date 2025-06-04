@@ -115,23 +115,15 @@ function displayCurrentUserQuestion() {
         id: question.id || question._id,
         title: question.title || 'Untitled Question',
         description: question.description || '',
-        endTime: question.endTime || new Date().toISOString(),
         nominees: Array.isArray(question.nominees) ? question.nominees : []
     };
     
-    const timeRemaining = getTimeRemaining(safeQuestion.endTime);
     const hasVoted = userVotes[safeQuestion.id];
     
     questionsContainer.innerHTML = `
         <div class="question-container">
             <!-- Question Header -->
             <div class="question-header">
-                <div class="question-meta">
-                    <span class="question-number">${currentQuestionIndex + 1} of ${currentQuestions.length}</span>
-                    <span class="time-remaining">
-                        <i class="fas fa-clock"></i> ${timeRemaining}
-                    </span>
-                </div>
                 <h2 class="question-title">${safeQuestion.title}</h2>
                 <p class="question-description">${safeQuestion.description}</p>
             </div>
@@ -141,36 +133,20 @@ function displayCurrentUserQuestion() {
                 ${safeQuestion.nominees.map(nominee => {
                     const nomineeId = nominee.id || nominee._id;
                     const nomineeName = nominee.name || 'Unknown';
-                    const nomineeVotes = nominee.votes || 0;
-                    
-                    // Fix image path - use proper base URL
-                    const getImageUrl = (image) => {
-                        if (!image || image === null) {
-                            return null;
-                        }
-                        return `${MCA.staticURL}${image}`;
-                    };
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
                              data-nominee-id="${nomineeId}"
                              onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
                             <div class="nominee-avatar">
-                                ${getImageUrl(nominee.image) ? 
-                                    `<img src="${getImageUrl(nominee.image)}" 
-                                          alt="${nominee.name}" 
-                                          class="nominee-avatar-img"
-                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                     <div class="nominee-initial-avatar" style="display:none;">${nominee.name.charAt(0).toUpperCase()}</div>` :
-                                    `<div class="nominee-initial-avatar">${nominee.name.charAt(0).toUpperCase()}</div>`
-                                }
+                                <img src="${nominee.image || '/assets/images/avatar.png'}" 
+                                     alt="${nominee.name}" 
+                                     class="nominee-avatar-img"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="nominee-initial-avatar" style="display:none;">${nominee.name.charAt(0).toUpperCase()}</div>
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
-                                <div class="nominee-votes">
-                                    <i class="fas fa-vote-yea"></i>
-                                    <span>${nomineeVotes} votes</span>
-                                </div>
                             </div>
                             <div class="selection-indicator">
                                 <i class="fas fa-check"></i>
@@ -180,41 +156,160 @@ function displayCurrentUserQuestion() {
                 }).join('')}
             </div>
             
-            <!-- Action Buttons -->
-            <div class="question-actions">
-                <div class="navigation-buttons">
-                    <button class="btn btn-secondary" 
-                            onclick="previousUserQuestion()" 
-                            ${currentQuestionIndex === 0 ? 'disabled' : ''}>
-                        <i class="fas fa-chevron-left"></i> Previous
-                    </button>
-                    <button class="btn btn-secondary" 
-                            onclick="nextUserQuestion()" 
-                            ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}>
-                        <i class="fas fa-chevron-right"></i> Next
-                    </button>
-                </div>
-                
-                <div class="vote-button">
-                    <button class="btn btn-primary ${hasVoted ? 'btn-success' : ''}" 
-                            id="submitVoteBtn"
-                            onclick="submitCurrentVote()"
-                            ${!userVotes[safeQuestion.id] ? 'disabled' : ''}>
-                        <i class="fas fa-${hasVoted ? 'check' : 'vote-yea'}"></i>
-                        ${hasVoted ? 'Vote Submitted' : 'Submit Vote'}
-                    </button>
-                </div>
+            <!-- Submit Button -->
+            <div class="vote-button-container">
+                <button class="btn btn-primary ${hasVoted ? 'btn-disabled' : ''}" 
+                        id="submitVoteBtn"
+                        onclick="submitCurrentVote()"
+                        ${hasVoted ? 'disabled' : ''}>
+                    ${hasVoted ? 'Vote Submitted' : 'Submit Vote'}
+                </button>
             </div>
-            
-            <!-- Progress Bar -->
-            <div class="progress-container">
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${((currentQuestionIndex + 1) / currentQuestions.length) * 100}%"></div>
-                </div>
-                <span class="progress-text">${currentQuestionIndex + 1} of ${currentQuestions.length} questions</span>
+
+            <!-- Navigation Buttons -->
+            <div class="navigation-buttons">
+                <button class="nav-btn ${currentQuestionIndex === 0 ? 'disabled' : ''}" 
+                        onclick="previousUserQuestion()" 
+                        ${currentQuestionIndex === 0 ? 'disabled' : ''}>
+                    ← Previous
+                </button>
+                <button class="nav-btn ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}" 
+                        onclick="nextUserQuestion()" 
+                        ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}>
+                    Next →
+                </button>
             </div>
         </div>
     `;
+
+    // Add CSS if not already present
+    if (!document.getElementById('voting-styles')) {
+        const styles = document.createElement('style');
+        styles.id = 'voting-styles';
+        styles.textContent = `
+            .question-container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+
+            .question-header {
+                text-align: center;
+                margin-bottom: 40px;
+            }
+
+            .question-title {
+                font-size: 28px;
+                font-weight: bold;
+                color: #fff;
+                margin-bottom: 10px;
+            }
+
+            .question-description {
+                font-size: 16px;
+                color: rgba(255, 255, 255, 0.8);
+            }
+
+            .nominees-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+                margin: 20px 0 40px;
+            }
+
+            .nominee-card {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .nominee-card:hover {
+                background: rgba(255, 255, 255, 0.15);
+            }
+
+            .nominee-card.selected {
+                background: rgba(255, 255, 255, 0.2);
+                border: 2px solid #fff;
+            }
+
+            .nominee-avatar {
+                width: 200px;
+                height: 200px;
+                border-radius: 10px;
+                overflow: hidden;
+                margin-bottom: 15px;
+            }
+
+            .nominee-avatar-img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+            .nominee-name {
+                font-size: 18px;
+                color: #fff;
+                text-align: center;
+                margin: 10px 0;
+            }
+
+            .vote-button-container {
+                text-align: center;
+                margin: 30px 0;
+            }
+
+            .btn-primary {
+                background: #4CAF50;
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 5px;
+                font-size: 16px;
+                cursor: pointer;
+                transition: background 0.3s ease;
+            }
+
+            .btn-primary:hover {
+                background: #45a049;
+            }
+
+            .btn-disabled {
+                background: #666;
+                cursor: not-allowed;
+            }
+
+            .navigation-buttons {
+                display: flex;
+                justify-content: center;
+                gap: 20px;
+            }
+
+            .nav-btn {
+                background: transparent;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                color: white;
+                padding: 8px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .nav-btn:hover:not(.disabled) {
+                border-color: white;
+            }
+
+            .nav-btn.disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+        `;
+        document.head.appendChild(styles);
+    }
 }
 
 function selectNominee(questionId, nomineeId) {
@@ -239,7 +334,7 @@ function selectNominee(questionId, nomineeId) {
     const submitBtn = document.getElementById('submitVoteBtn');
     if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-vote-yea"></i> Submit Vote';
+        submitBtn.innerHTML = 'Submit Vote';
     }
 }
 
@@ -278,8 +373,8 @@ async function submitCurrentVote() {
             // Update the UI
             const submitBtn = document.getElementById('submitVoteBtn');
             if (submitBtn) {
-                submitBtn.innerHTML = '<i class="fas fa-check"></i> Vote Submitted';
-                submitBtn.classList.add('btn-success');
+                submitBtn.innerHTML = 'Vote Submitted';
+                submitBtn.classList.add('btn-disabled');
                 submitBtn.disabled = true;
             }
             
