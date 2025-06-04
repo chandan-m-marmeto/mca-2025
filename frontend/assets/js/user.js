@@ -154,12 +154,15 @@ function displayCurrentUserQuestion() {
                         fullData: nominee
                     });
                     
+                    // Construct image URL using the correct format
+                    const imageUrl = `${MCA.staticURL}/uploads/nominees/nominee-${nomineeId}.JPG`;
+                    
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
                              data-nominee-id="${nomineeId}"
                              onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
                             <div class="nominee-avatar">
-                                <img src="/uploads/nominees/nominee-${nomineeId}.JPG" 
+                                <img src="${imageUrl}" 
                                      alt="${nominee.name}" 
                                      class="nominee-avatar-img"
                                      onerror="console.error('Failed to load image for nominee:', '${nomineeName}', 'URL:', this.src)">
