@@ -35,6 +35,27 @@
     padding: 8px;
 }
 
+/* Fallback text logo when image is not available */
+.sidebar-logo::after {
+    content: "🏆";
+    font-size: 32px;
+    color: #1067AD;
+    font-weight: 100;
+    font-family: 'Lato', sans-serif;
+    display: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    line-height: 50px;
+    text-align: center;
+}
+
+.sidebar-logo img[style*="display: none"] + .sidebar-logo::after,
+.sidebar-logo:empty::after {
+    display: block;
+}
+
 .sidebar-title {
     font-size: 1.5rem;
     font-weight: 100;
@@ -1154,6 +1175,11 @@
 .pie-chart {
     display: flex;
     justify-content: center;
+}
+
+.pie-svg {
+    width: 200px;
+    height: 200px;
 }
 
 .chart-legend {

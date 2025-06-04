@@ -42,6 +42,21 @@ body:has(#user-dashboard:not(.hidden)) {
     filter: brightness(1.1);
 }
 
+/* Fallback text logo when image is not available */
+.user-container .user-logo::after {
+    content: "🏆 MCA 2025";
+    font-size: 20px;
+    color: #1067AD;
+    font-weight: 100;
+    font-family: 'Lato', sans-serif;
+    display: none;
+}
+
+.user-container .user-logo img[style*="display: none"] + .user-logo::after,
+.user-container .user-logo:empty::after {
+    display: block;
+}
+
 .user-container .user-header::before {
     content: '';
     position: absolute;
