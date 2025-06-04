@@ -29,17 +29,21 @@ body:has(#user-dashboard:not(.hidden)) {
 .user-container .user-logo {
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
-    position: relative;
-    z-index: 3;
+    margin-bottom: 1rem;
 }
 
 .user-container .user-logo img {
-    max-width: 180px;
-    height: auto;
-    max-height: 50px;
+    width: 160px;
+    height: 160px;
     object-fit: contain;
-    filter: brightness(1.1);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    transition: transform 0.3s ease;
+}
+
+.user-container .user-logo img:hover {
+    transform: scale(1.05);
 }
 
 /* Fallback text logo when image is not available */
@@ -75,12 +79,12 @@ body:has(#user-dashboard:not(.hidden)) {
 }
 
 .user-container .user-title {
-    font-size: clamp(32px, 4vw, 42px);
+    font-size: 2rem;
     font-weight: 100;
+    color: #fff;
+    margin: 0;
+    text-align: center;
     font-family: 'Lato', sans-serif;
-    color: #1067AD;
-    margin-bottom: 12px;
-    letter-spacing: -0.02em;
 }
 
 .user-container .user-subtitle {
