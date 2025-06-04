@@ -13,13 +13,16 @@ async function loadUserQuestions() {
         
         if (response.ok) {
             const data = await response.json();
-            console.log('Loaded questions:', data);
+            console.log('API Response:', data);
+            console.log('MCA Config:', MCA);
             
             // Handle both old and new response formats
             currentQuestions = data.questions || data || [];
             currentQuestionIndex = 0;
             
             if (currentQuestions.length > 0) {
+                console.log('First Question:', currentQuestions[0]);
+                console.log('First Nominee:', currentQuestions[0].nominees[0]);
                 displayCurrentUserQuestion();
             } else {
                 displayNoQuestionsState();
@@ -120,6 +123,13 @@ function displayCurrentUserQuestion() {
     
     const hasVoted = userVotes[safeQuestion.id];
     
+    // Debug nominee data
+    console.log('Current Question:', question);
+    console.log('Safe Question:', safeQuestion);
+    safeQuestion.nominees.forEach((nominee, index) => {
+        console.log(`Nominee ${index}:`, nominee);
+    });
+    
     questionsContainer.innerHTML = `
         <div class="question-container">
             <!-- Question Header -->
@@ -136,18 +146,23 @@ function displayCurrentUserQuestion() {
                     const nomineeId = nominee.id || nominee._id;
                     const nomineeName = nominee.name || 'Unknown';
                     
-                    // Get the full image path from nominee data
-                    const imageUrl = `/uploads/nominees/${nominee.image.split('/').pop()}`;
+                    // Debug each nominee as we process it
+                    console.log('Processing nominee:', {
+                        id: nomineeId,
+                        name: nomineeName,
+                        image: nominee.image,
+                        fullData: nominee
+                    });
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
                              data-nominee-id="${nomineeId}"
                              onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
                             <div class="nominee-avatar">
-                                <img src="${imageUrl}" 
+                                <img src="/uploads/nominees/nominee-${nomineeId}.JPG" 
                                      alt="${nominee.name}" 
                                      class="nominee-avatar-img"
-                                     onerror="this.className += ' image-error'">
+                                     onerror="console.error('Failed to load image for nominee:', '${nomineeName}', 'URL:', this.src)">
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
