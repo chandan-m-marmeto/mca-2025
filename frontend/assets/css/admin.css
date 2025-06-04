@@ -24,12 +24,12 @@
     display: flex;
     justify-content: center;
     margin-bottom: 1.5rem;
-    padding: 0.5rem;
+    padding: 1rem;
 }
 
 .sidebar-logo img {
-    width: 120px;
-    height: 120px;
+    width: 220px;
+    height: auto;
     object-fit: contain;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.05);
@@ -51,6 +51,7 @@
     display: none;
 }
 
+/* Keep the title hidden */
 .sidebar-title {
     display: none;
 }
@@ -60,7 +61,7 @@
     color: rgba(255, 255, 255, 0.7);
     font-size: 0.9rem;
     font-family: 'Lato', sans-serif;
-    margin-top: 0.5rem;
+    margin-top: 1rem;
 }
 
 .nav-menu {
