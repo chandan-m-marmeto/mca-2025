@@ -41,25 +41,9 @@
     transform: scale(1.05);
 }
 
-/* Fallback text logo when image is not available */
+/* Remove the fallback trophy completely */
 .sidebar-logo::before {
-    content: "🏆";
-    font-size: 42px;
-    color: #1067AD;
-    font-weight: 300;
-    font-family: 'Lato', sans-serif;
-    width: 80px;
-    height: 80px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.05);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.3s ease;
-}
-
-.sidebar-logo::before:hover {
-    transform: scale(1.05);
+    display: none;
 }
 
 /* Hide the before element when image is present */
