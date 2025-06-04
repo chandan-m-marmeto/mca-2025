@@ -154,9 +154,8 @@ function displayCurrentUserQuestion() {
                         fullData: nominee
                     });
                     
-                    // Get shortened ID for image URL (first 7 chars)
-                    const shortId = nomineeId.substring(0, 7);
-                    const imageUrl = `${MCA.staticURL}/uploads/nominees/nominee-${shortId}...JPG`;
+                    // Use the image path from the API response
+                    const imageUrl = `${MCA.staticURL}${nominee.image}`;
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
