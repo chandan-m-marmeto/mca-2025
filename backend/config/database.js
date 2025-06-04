@@ -2,14 +2,49 @@ import mongoose from 'mongoose';
 
 const connectDatabase = async () => {
     try {
-        const connection = await mongoose.connect(process.env.MONGODB_URI, {
+        const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mca2025';
+        
+        await mongoose.connect(mongoURI, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
+            maxPoolSize: 100, // Increase connection pool size
+            minPoolSize: 10,  // Minimum connections to maintain
+            socketTimeoutMS: 45000, // Socket timeout
+            serverSelectionTimeoutMS: 5000, // Server selection timeout
+            heartbeatFrequencyMS: 10000, // Heartbeat frequency
+            retryWrites: true,
+            w: 'majority', // Write concern for better data consistency
+            wtimeout: 2500 // Write concern timeout
         });
-        console.log(`MongoDB Connected: ${connection.connection.host}`);
+
+        // Create indexes for better query performance
+        await Promise.all([
+            mongoose.connection.collection('users').createIndex({ email: 1 }, { unique: true }),
+            mongoose.connection.collection('questions').createIndex({ isActive: 1 }),
+            mongoose.connection.collection('nominees').createIndex({ votes: -1 }),
+            mongoose.connection.collection('traffic').createIndex({ timestamp: -1 }),
+            mongoose.connection.collection('sessions').createIndex({ sessionId: 1 })
+        ]);
+
+        console.log('✅ MongoDB Connected');
+        
+        // Handle connection events
+        mongoose.connection.on('error', err => {
+            console.error('MongoDB connection error:', err);
+        });
+
+        mongoose.connection.on('disconnected', () => {
+            console.warn('MongoDB disconnected. Attempting to reconnect...');
+        });
+
+        mongoose.connection.on('reconnected', () => {
+            console.log('MongoDB reconnected');
+        });
+
     } catch (error) {
-        console.error(`Error: ${error.message}`);
-        process.exit(1);
+        console.error('❌ MongoDB Connection Error:', error);
+        // Retry connection after delay
+        setTimeout(connectDatabase, 5000);
     }
 };
 

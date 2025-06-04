@@ -54,25 +54,60 @@ app.use(cors({
     credentials: true
 }));
 
-// Increase request size limits for file uploads (BEFORE routes)
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ limit: '100mb', extended: true }));
-
-// Serve static files for uploaded images
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Rate limiting - Fixed configuration
-const limiter = rateLimit({
+// Rate limiting configurations
+const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: process.env.NODE_ENV === 'production' ? 200 : 10000,
+    max: process.env.NODE_ENV === 'production' ? 500 : 10000, // Higher limit for auth endpoints
+    message: {
+        error: 'Too many authentication attempts, please try again later.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    trustProxy: true
+});
+
+const voteLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: process.env.NODE_ENV === 'production' ? 300 : 10000, // Adjusted for voting bursts
+    message: {
+        error: 'Too many vote attempts, please try again later.'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    trustProxy: true
+});
+
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: process.env.NODE_ENV === 'production' ? 1000 : 10000, // General API endpoints
     message: {
         error: 'Too many requests from this IP, please try again later.'
     },
     standardHeaders: true,
     legacyHeaders: false,
-    trustProxy: true // Add this for nginx
+    trustProxy: true
 });
-app.use('/api/', limiter);
+
+// Apply rate limiters to specific routes
+app.use('/api/auth/', authLimiter);
+app.use('/api/vote/', voteLimiter);
+app.use('/api/', generalLimiter); // For all other routes
+
+// Increase request size limits for file uploads (BEFORE routes)
+app.use(express.json({ 
+    limit: '100mb',
+    verify: (req, res, buf) => {
+        req.rawBody = buf.toString();
+    }
+}));
+app.use(express.urlencoded({ 
+    limit: '100mb', 
+    extended: true,
+    parameterLimit: 50000
+}));
+
+// Serve static files for uploaded images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Connect to MongoDB
 connectDatabase();
@@ -97,7 +132,12 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'mca-analytics-secret',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false } // Set to true in production with HTTPS
+    cookie: { 
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
 }));
 
 // Analytics session tracking

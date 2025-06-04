@@ -179,19 +179,22 @@ export const getQuestionAnalytics = async (req, res) => {
 // Get real-time analytics
 export const getRealTimeAnalytics = async (req, res) => {
     try {
-        const last15Minutes = new Date(Date.now() - 15 * 60 * 1000);
+        const last30Minutes = new Date(Date.now() - 30 * 60 * 1000);
         const lastHour = new Date(Date.now() - 60 * 60 * 1000);
+        const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
         const [
             activeUsers,
             recentActions,
             liveVotes,
-            currentSessions
+            currentSessions,
+            dailyStats
         ] = await Promise.all([
-            getActiveUsers(),
-            Traffic.find({ timestamp: { $gte: last15Minutes } })
+            getActiveUsers(last30Minutes),
+            Traffic.find({ timestamp: { $gte: last30Minutes } })
                 .sort({ timestamp: -1 })
-                .limit(20),
+                .limit(50)
+                .populate('userId', 'email'),
             Traffic.find({ 
                 action: 'vote_cast',
                 timestamp: { $gte: lastHour }
@@ -199,27 +202,44 @@ export const getRealTimeAnalytics = async (req, res) => {
             SessionAnalytics.find({
                 startTime: { $gte: lastHour },
                 endTime: { $exists: false }
-            }).countDocuments()
+            }).countDocuments(),
+            SystemAnalytics.findOne({
+                date: {
+                    $gte: last24Hours
+                }
+            }).sort({ date: -1 })
         ]);
+
+        // Process and aggregate data
+        const processedData = {
+            activeUsers: {
+                current: activeUsers,
+                trend: await getActiveUsersTrend()
+            },
+            activeSessions: {
+                current: currentSessions,
+                trend: await getSessionsTrend()
+            },
+            recentActions: recentActions.map(action => ({
+                action: action.action,
+                page: action.page,
+                timestamp: action.timestamp,
+                userEmail: action.userId?.email || 'Anonymous',
+                metadata: action.metadata
+            })),
+            liveVotes: liveVotes.map(vote => ({
+                timestamp: vote.timestamp,
+                userEmail: vote.userId?.email || 'Anonymous',
+                questionId: vote.metadata?.get('questionId'),
+                nomineeId: vote.metadata?.get('nomineeId')
+            })),
+            dailyStatistics: dailyStats || {},
+            lastUpdated: new Date()
+        };
 
         res.json({
             success: true,
-            data: {
-                activeUsers,
-                activeSessions: currentSessions,
-                recentActions: recentActions.map(action => ({
-                    action: action.action,
-                    page: action.page,
-                    timestamp: action.timestamp,
-                    userEmail: action.userId?.email || 'Anonymous'
-                })),
-                liveVotes: liveVotes.map(vote => ({
-                    timestamp: vote.timestamp,
-                    userEmail: vote.userId?.email || 'Anonymous',
-                    questionId: vote.metadata?.get('questionId')
-                })),
-                lastUpdated: new Date()
-            }
+            data: processedData
         });
 
     } catch (error) {
@@ -319,10 +339,9 @@ const calculateEngagementMetrics = async (startDate) => {
     };
 };
 
-const getActiveUsers = async () => {
-    const last15Minutes = new Date(Date.now() - 15 * 60 * 1000);
+const getActiveUsers = async (since) => {
     return await Traffic.distinct('userId', {
-        timestamp: { $gte: last15Minutes },
+        timestamp: { $gte: since },
         userId: { $ne: null }
     }).then(users => users.length);
 };
@@ -353,4 +372,61 @@ const generateQuestionInsights = (analytics, nominees) => {
     }
     
     return insights;
+};
+
+// Get active users trend
+const getActiveUsersTrend = async () => {
+    const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const hourlyData = await Traffic.aggregate([
+        {
+            $match: {
+                timestamp: { $gte: last24Hours },
+                userId: { $ne: null }
+            }
+        },
+        {
+            $group: {
+                _id: {
+                    $dateToString: {
+                        format: "%Y-%m-%d-%H",
+                        date: "$timestamp"
+                    }
+                },
+                uniqueUsers: { $addToSet: "$userId" }
+            }
+        },
+        {
+            $project: {
+                hour: "$_id",
+                count: { $size: "$uniqueUsers" }
+            }
+        },
+        { $sort: { hour: 1 } }
+    ]);
+
+    return hourlyData;
+};
+
+// Get sessions trend
+const getSessionsTrend = async () => {
+    const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return await SessionAnalytics.aggregate([
+        {
+            $match: {
+                startTime: { $gte: last24Hours }
+            }
+        },
+        {
+            $group: {
+                _id: {
+                    $dateToString: {
+                        format: "%Y-%m-%d-%H",
+                        date: "$startTime"
+                    }
+                },
+                count: { $sum: 1 }
+            }
+        },
+        { $sort: { _id: 1 } }
+    ]);
 }; 

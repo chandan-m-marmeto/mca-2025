@@ -1,5 +1,6 @@
 import { Traffic, QuestionAnalytics, SessionAnalytics } from '../models/Analytics.js';
 import { v4 as uuidv4 } from 'uuid';
+import mongoose from 'mongoose';
 
 // Generate session ID if not exists
 export const generateSessionId = (req, res, next) => {
@@ -94,44 +95,77 @@ export const trackVote = async (req, res, next) => {
         const { questionId, nomineeId } = req.body;
         
         if (questionId) {
-            // Update question analytics
-            await QuestionAnalytics.findOneAndUpdate(
-                { questionId },
-                { 
-                    $inc: { votes: 1 },
-                    $push: {
-                        dailyStats: {
-                            $each: [{
-                                date: new Date().setHours(0, 0, 0, 0),
-                                votes: 1
-                            }],
-                            $slice: -30
-                        }
-                    },
-                    lastUpdated: new Date()
-                },
-                { upsert: true }
-            );
+            const session = await mongoose.startSession();
+            session.startTransaction();
 
-            // Update session analytics
-            if (req.sessionId) {
-                await SessionAnalytics.findOneAndUpdate(
-                    { sessionId: req.sessionId },
-                    {
+            try {
+                // Update question analytics
+                await QuestionAnalytics.findOneAndUpdate(
+                    { questionId },
+                    { 
+                        $inc: { 
+                            votes: 1,
+                            uniqueVoters: 1
+                        },
                         $push: {
-                            votescast: {
-                                questionId,
-                                nomineeId,
-                                votedAt: new Date()
+                            dailyStats: {
+                                $each: [{
+                                    date: new Date().setHours(0, 0, 0, 0),
+                                    votes: 1
+                                }],
+                                $slice: -30
                             }
+                        },
+                        $set: {
+                            lastUpdated: new Date()
                         }
                     },
-                    { upsert: true }
+                    { upsert: true, session }
                 );
+
+                // Update conversion rate
+                const analytics = await QuestionAnalytics.findOne({ questionId }).session(session);
+                if (analytics) {
+                    const conversionRate = (analytics.votes / Math.max(analytics.views, 1)) * 100;
+                    await QuestionAnalytics.findOneAndUpdate(
+                        { questionId },
+                        { $set: { conversionRate } },
+                        { session }
+                    );
+                }
+
+                // Update session analytics
+                if (req.sessionId) {
+                    await SessionAnalytics.findOneAndUpdate(
+                        { sessionId: req.sessionId },
+                        {
+                            $push: {
+                                votescast: {
+                                    questionId,
+                                    nomineeId,
+                                    votedAt: new Date()
+                                }
+                            }
+                        },
+                        { upsert: true, session }
+                    );
+                }
+
+                await session.commitTransaction();
+            } catch (error) {
+                await session.abortTransaction();
+                throw error;
+            } finally {
+                session.endSession();
             }
         }
     } catch (error) {
         console.error('Vote tracking error:', error);
+        // Log to monitoring service
+        if (process.env.NODE_ENV === 'production') {
+            // Implement proper error monitoring
+            // e.g., Sentry.captureException(error);
+        }
     }
     next();
 };
