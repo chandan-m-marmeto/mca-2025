@@ -41,13 +41,44 @@ function displayNoQuestionsState() {
     if (container) {
         container.innerHTML = `
             <div class="no-questions-state">
-                <div class="empty-state">
-                    <div class="empty-icon">🗳️</div>
-                    <h3>No Questions Available</h3>
-                    <p>There are no questions available for voting at the moment.</p>
-                    <button class="btn btn-primary" onclick="loadUserQuestions()">
-                        Refresh
-                    </button>
+                <div class="mca-memories">
+                    <div class="memories-header">
+                        <h2>🏆 MCA Memories</h2>
+                        <p>While we prepare for MCA 2025, take a look at some highlights from previous years!</p>
+                    </div>
+                    <div class="memories-gallery">
+                        <div class="memory-card">
+                            <div class="memory-image">
+                                <div class="placeholder-image">🎉</div>
+                            </div>
+                            <h3>MCA 2024 Winners</h3>
+                            <p>Celebrating our amazing team achievements</p>
+                        </div>
+                        <div class="memory-card">
+                            <div class="memory-image">
+                                <div class="placeholder-image">🏅</div>
+                            </div>
+                            <h3>Best Innovation</h3>
+                            <p>Recognizing groundbreaking solutions</p>
+                        </div>
+                        <div class="memory-card">
+                            <div class="memory-image">
+                                <div class="placeholder-image">👥</div>
+                            </div>
+                            <h3>Team Spirit</h3>
+                            <p>Honoring collaboration and teamwork</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="no-voting-message">
+                    <div class="empty-state">
+                        <div class="empty-icon">🗳️</div>
+                        <h3>No Active Voting Questions</h3>
+                        <p>There are no active voting questions at the moment. Please check back later when voting opens!</p>
+                        <button class="btn btn-primary" onclick="loadUserQuestions()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -84,194 +115,106 @@ function displayCurrentUserQuestion() {
         id: question.id || question._id,
         title: question.title || 'Untitled Question',
         description: question.description || '',
+        endTime: question.endTime || new Date().toISOString(),
         nominees: Array.isArray(question.nominees) ? question.nominees : []
     };
     
+    const timeRemaining = getTimeRemaining(safeQuestion.endTime);
     const hasVoted = userVotes[safeQuestion.id];
-
+    
     questionsContainer.innerHTML = `
-        <div class="voting-container">
+        <div class="question-container">
+            <!-- Question Header -->
             <div class="question-header">
+                <div class="question-meta">
+                    <span class="question-number">${currentQuestionIndex + 1} of ${currentQuestions.length}</span>
+                    <span class="time-remaining">
+                        <i class="fas fa-clock"></i> ${timeRemaining}
+                    </span>
+                </div>
                 <h2 class="question-title">${safeQuestion.title}</h2>
                 <p class="question-description">${safeQuestion.description}</p>
             </div>
-
+            
+            <!-- Nominees Grid -->
             <div class="nominees-grid">
-                ${safeQuestion.nominees.map(nominee => `
-                    <div class="nominee-card">
-                        <div class="nominee-image-container">
-                            <img src="${nominee.image || '/assets/images/avatar.png'}" 
-                                 alt="${nominee.name}" 
-                                 class="nominee-image"
-                                 onerror="this.src='/assets/images/avatar.png'">
+                ${safeQuestion.nominees.map(nominee => {
+                    const nomineeId = nominee.id || nominee._id;
+                    const nomineeName = nominee.name || 'Unknown';
+                    const nomineeVotes = nominee.votes || 0;
+                    
+                    // Fix image path - use proper base URL
+                    const getImageUrl = (image) => {
+                        if (!image || image === null) {
+                            return null;
+                        }
+                        return `${MCA.staticURL}${image}`;
+                    };
+                    
+                    return `
+                        <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
+                             data-nominee-id="${nomineeId}"
+                             onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
+                            <div class="nominee-avatar">
+                                ${getImageUrl(nominee.image) ? 
+                                    `<img src="${getImageUrl(nominee.image)}" 
+                                          alt="${nominee.name}" 
+                                          class="nominee-avatar-img"
+                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                     <div class="nominee-initial-avatar" style="display:none;">${nominee.name.charAt(0).toUpperCase()}</div>` :
+                                    `<div class="nominee-initial-avatar">${nominee.name.charAt(0).toUpperCase()}</div>`
+                                }
+                            </div>
+                            <div class="nominee-info">
+                                <h3 class="nominee-name">${nomineeName}</h3>
+                                <div class="nominee-votes">
+                                    <i class="fas fa-vote-yea"></i>
+                                    <span>${nomineeVotes} votes</span>
+                                </div>
+                            </div>
+                            <div class="selection-indicator">
+                                <i class="fas fa-check"></i>
+                            </div>
                         </div>
-                        <div class="nominee-details">
-                            <h3 class="nominee-name">${nominee.name}</h3>
-                            ${nominee.department ? `<p class="nominee-department">${nominee.department}</p>` : ''}
-                        </div>
-                        <div class="vote-action">
-                            ${!hasVoted ? 
-                                `<button onclick="castVote('${safeQuestion.id}', '${nominee._id}')" class="vote-button">
-                                    Vote
-                                </button>` : 
-                                `<div class="voted-indicator">Voted ✓</div>`
-                            }
-                        </div>
-                    </div>
-                `).join('')}
+                    `;
+                }).join('')}
             </div>
-
-            <div class="pagination-controls">
-                <button class="nav-button ${currentQuestionIndex === 0 ? 'disabled' : ''}"
-                        onclick="previousQuestion()" 
-                        ${currentQuestionIndex === 0 ? 'disabled' : ''}>
-                    ← Previous
-                </button>
-                <span class="page-indicator">
-                    ${currentQuestionIndex + 1} of ${currentQuestions.length}
-                </span>
-                <button class="nav-button ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}"
-                        onclick="nextQuestion()" 
-                        ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}>
-                    Next →
-                </button>
+            
+            <!-- Action Buttons -->
+            <div class="question-actions">
+                <div class="navigation-buttons">
+                    <button class="btn btn-secondary" 
+                            onclick="previousUserQuestion()" 
+                            ${currentQuestionIndex === 0 ? 'disabled' : ''}>
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                    <button class="btn btn-secondary" 
+                            onclick="nextUserQuestion()" 
+                            ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}>
+                        <i class="fas fa-chevron-right"></i> Next
+                    </button>
+                </div>
+                
+                <div class="vote-button">
+                    <button class="btn btn-primary ${hasVoted ? 'btn-success' : ''}" 
+                            id="submitVoteBtn"
+                            onclick="submitCurrentVote()"
+                            ${!userVotes[safeQuestion.id] ? 'disabled' : ''}>
+                        <i class="fas fa-${hasVoted ? 'check' : 'vote-yea'}"></i>
+                        ${hasVoted ? 'Vote Submitted' : 'Submit Vote'}
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${((currentQuestionIndex + 1) / currentQuestions.length) * 100}%"></div>
+                </div>
+                <span class="progress-text">${currentQuestionIndex + 1} of ${currentQuestions.length} questions</span>
             </div>
         </div>
     `;
-
-    // Add CSS if not already present
-    if (!document.getElementById('voting-styles')) {
-        const styles = document.createElement('style');
-        styles.id = 'voting-styles';
-        styles.textContent = `
-            .voting-container {
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 20px;
-            }
-
-            .question-header {
-                text-align: center;
-                margin-bottom: 30px;
-            }
-
-            .question-title {
-                font-size: 24px;
-                color: #333;
-                margin-bottom: 10px;
-            }
-
-            .question-description {
-                color: #666;
-                font-size: 16px;
-            }
-
-            .nominees-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 20px;
-                margin: 20px 0;
-            }
-
-            .nominee-card {
-                background: #fff;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                overflow: hidden;
-                transition: transform 0.2s;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                padding: 20px;
-            }
-
-            .nominee-card:hover {
-                transform: translateY(-5px);
-            }
-
-            .nominee-image-container {
-                width: 200px;
-                height: 200px;
-                margin-bottom: 15px;
-                border-radius: 10px;
-                overflow: hidden;
-            }
-
-            .nominee-image {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-
-            .nominee-details {
-                text-align: center;
-                margin-bottom: 15px;
-            }
-
-            .nominee-name {
-                font-size: 18px;
-                color: #333;
-                margin-bottom: 5px;
-            }
-
-            .nominee-department {
-                color: #666;
-                font-size: 14px;
-            }
-
-            .vote-button {
-                background: #4CAF50;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                cursor: pointer;
-                font-size: 16px;
-                transition: background 0.2s;
-            }
-
-            .vote-button:hover {
-                background: #45a049;
-            }
-
-            .voted-indicator {
-                color: #4CAF50;
-                font-weight: bold;
-            }
-
-            .pagination-controls {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                gap: 20px;
-                margin-top: 30px;
-            }
-
-            .nav-button {
-                background: #f0f0f0;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 5px;
-                cursor: pointer;
-                transition: background 0.2s;
-            }
-
-            .nav-button:not(.disabled):hover {
-                background: #e0e0e0;
-            }
-
-            .nav-button.disabled {
-                opacity: 0.5;
-                cursor: not-allowed;
-            }
-
-            .page-indicator {
-                font-size: 16px;
-                color: #666;
-            }
-        `;
-        document.head.appendChild(styles);
-    }
 }
 
 function selectNominee(questionId, nomineeId) {
