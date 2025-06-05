@@ -15,7 +15,7 @@ async function loadUserQuestions() {
         
         const statusData = await statusResponse.json();
         
-        if (!statusData.isActive) {
+        if (!statusData.data.isActive) {
             displayNoQuestionsState();
             hideLoading();
             return;
