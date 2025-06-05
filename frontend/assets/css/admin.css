@@ -1391,4 +1391,83 @@ h1, h2, h3, h4, h5, h6,
     background: #1067AD;
     border-radius: 4px;
     transition: width 0.3s ease;
+}
+
+/* Voting Session Controls */
+.voting-session-controls {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.session-status {
+    margin-bottom: 20px;
+}
+
+.session-status h2 {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 14px;
+    font-weight: 500;
+    margin-right: 10px;
+}
+
+.status-badge.active {
+    background: #4CAF50;
+    color: white;
+}
+
+.status-badge.inactive {
+    background: #666;
+    color: white;
+}
+
+.session-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.duration-input {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.duration-input label {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.duration-input input {
+    width: 100px;
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.duration-input input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.active-session, .inactive-session {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.time-left {
+    font-weight: 500;
+    color: #4CAF50;
 } 

@@ -5,6 +5,7 @@ import fs from 'fs';
 import sharp from 'sharp';
 import { fileURLToPath } from 'url';
 import { uploadToS3, deleteFromS3 } from '../config/s3.js';
+import VotingSession from '../models/VotingSession.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,17 +47,16 @@ export const createQuestion = async (req, res) => {
         console.log('Body:', JSON.stringify(req.body, null, 2));
         console.log('Content-Type:', req.headers['content-type']);
         
-        const { title, description, nominees, duration } = req.body;
+        const { title, description, nominees } = req.body;
 
         console.log('📋 Extracted data:');
         console.log('- Title:', title);
         console.log('- Description:', description);
-        console.log('- Duration:', duration);
         console.log('- Nominees (raw):', nominees);
         console.log('- Nominees type:', typeof nominees);
         console.log('- Is Array:', Array.isArray(nominees));
 
-        // This endpoint now only handles JSON data, no files
+        // Validate nominees
         let parsedNominees;
         if (Array.isArray(nominees)) {
             console.log('✅ Nominees is already an array');
@@ -82,64 +82,13 @@ export const createQuestion = async (req, res) => {
             });
         }
 
-        console.log('🔍 Final parsed nominees:', parsedNominees);
-
-        // Validate nominees structure
-        if (!parsedNominees || !Array.isArray(parsedNominees)) {
-            console.error('❌ Nominees is not an array after parsing');
-            return res.status(400).json({
-                success: false,
-                error: 'Nominees must be an array'
-            });
-        }
-
-        if (parsedNominees.length < 2) {
-            console.error('❌ Not enough nominees:', parsedNominees.length);
-            return res.status(400).json({
-                success: false,
-                error: 'At least 2 nominees are required'
-            });
-        }
-
-        // Validate each nominee has a name
-        for (let i = 0; i < parsedNominees.length; i++) {
-            const nominee = parsedNominees[i];
-            console.log(`👤 Validating nominee ${i + 1}:`, nominee);
-            
-            if (!nominee || typeof nominee !== 'object') {
-                console.error(`❌ Nominee ${i + 1} is not an object:`, nominee);
-                return res.status(400).json({
-                    success: false,
-                    error: `Nominee ${i + 1} must be an object`
-                });
-            }
-            
-            if (!nominee.name || typeof nominee.name !== 'string' || !nominee.name.trim()) {
-                console.error(`❌ Nominee ${i + 1} has invalid name:`, nominee.name);
-                return res.status(400).json({
-                    success: false,
-                    error: `Nominee ${i + 1} must have a valid name`
-                });
-            }
-        }
-
-        console.log('✅ All nominees validated successfully');
-
-        // Calculate start and end times
-        const startTime = new Date();
-        const endTime = new Date(startTime.getTime() + (duration * 60 * 60 * 1000));
-
-        console.log('⏰ Time calculated:');
-        console.log('- Start:', startTime);
-        console.log('- End:', endTime);
-
-        // Create all nominees (single batch operation) - ALL with null images
+        // Create all nominees (single batch operation)
         const nomineeDataArray = parsedNominees.map((nominee, index) => {
             const nomineeData = {
                 name: nominee.name.trim(),
                 votes: 0,
-                image: null, // Always start with null - use CSS initials
-                imageProcessed: true // Start as processed (CSS initials are "processed")
+                image: null,
+                imageProcessed: true
             };
             console.log(`👤 Creating nominee ${index + 1}:`, nomineeData);
             return nomineeData;
@@ -155,9 +104,7 @@ export const createQuestion = async (req, res) => {
             title,
             description,
             nominees: createdNominees.map(n => n._id),
-            startTime,
-            endTime,
-            isActive: true
+            isActive: false
         }).save();
 
         console.log('✅ Question created with ID:', question._id);
@@ -167,9 +114,7 @@ export const createQuestion = async (req, res) => {
             _id: question._id,
             title,
             description,
-            startTime,
-            endTime,
-            isActive: true,
+            isActive: false,
             nominees: createdNominees.map(nominee => ({
                 _id: nominee._id,
                 name: nominee.name,
@@ -189,12 +134,104 @@ export const createQuestion = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ CREATE QUESTION ERROR:', error);
-        console.error('❌ Error stack:', error.stack);
-        
+        console.error('Create question error:', error);
         res.status(500).json({
             success: false,
-            error: error.message
+            error: error.message || 'Something went wrong!'
+        });
+    }
+};
+
+// Start a new voting session
+export const startVotingSession = async (req, res) => {
+    try {
+        const { duration } = req.body;
+        
+        if (!duration || duration < 1) {
+            return res.status(400).json({
+                success: false,
+                error: 'Valid duration in hours is required'
+            });
+        }
+
+        const startTime = new Date();
+        const endTime = new Date(startTime.getTime() + (duration * 60 * 60 * 1000));
+
+        // Create new voting session
+        const session = await new VotingSession({
+            isActive: true,
+            startTime,
+            endTime
+        }).save();
+
+        // Activate all questions
+        await Question.updateMany({}, { isActive: true });
+
+        res.json({
+            success: true,
+            data: session,
+            message: 'Voting session started successfully!'
+        });
+    } catch (error) {
+        console.error('Start voting session error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to start voting session'
+        });
+    }
+};
+
+// End current voting session
+export const endVotingSession = async (req, res) => {
+    try {
+        // Find and end active session
+        const session = await VotingSession.findOneAndUpdate(
+            { isActive: true },
+            { isActive: false },
+            { new: true }
+        );
+
+        if (!session) {
+            return res.status(404).json({
+                success: false,
+                error: 'No active voting session found'
+            });
+        }
+
+        // Deactivate all questions
+        await Question.updateMany({}, { isActive: false });
+
+        res.json({
+            success: true,
+            data: session,
+            message: 'Voting session ended successfully!'
+        });
+    } catch (error) {
+        console.error('End voting session error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to end voting session'
+        });
+    }
+};
+
+// Get current voting session status
+export const getVotingSessionStatus = async (req, res) => {
+    try {
+        const session = await VotingSession.findOne({ isActive: true });
+        
+        res.json({
+            success: true,
+            data: {
+                isActive: !!session,
+                session: session || null
+            }
+        });
+    } catch (error) {
+        console.error('Get voting session status error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to get voting session status'
         });
     }
 };

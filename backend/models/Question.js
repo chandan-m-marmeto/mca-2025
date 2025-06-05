@@ -13,17 +13,9 @@ const questionSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Nominee'
   }],
-  startTime: {
-    type: Date,
-    required: true
-  },
-  endTime: {
-    type: Date,
-    required: true
-  },
   isActive: {
     type: Boolean,
-    default: true
+    default: false
   }
 }, {
   timestamps: true

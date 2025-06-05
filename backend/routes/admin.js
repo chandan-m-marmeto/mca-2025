@@ -2,12 +2,14 @@ import express from 'express';
 import tempUpload from '../middleware/tempUpload.js';
 import { 
     createQuestion, 
-    updateQuestion, 
-    updateQuestionStatus,
-    getResults, 
+    updateQuestion,
     deleteQuestion, 
+    getResults,
     getStatistics,
-    uploadNomineeImage
+    uploadNomineeImage,
+    startVotingSession,
+    endVotingSession,
+    getVotingSessionStatus
 } from '../controllers/adminController.js';
 import { authenticateToken, isAdmin } from '../middleware/auth.js';
 
@@ -17,13 +19,19 @@ const router = express.Router();
 router.use(authenticateToken);
 router.use(isAdmin);
 
-// Admin routes - separated question creation from image uploads
-router.post('/questions', createQuestion); // JSON only, no files
-router.post('/nominees/:nomineeId/image', tempUpload.single('image'), uploadNomineeImage); // Image upload
+// Question Management
+router.post('/questions', createQuestion);
+router.put('/questions/:id', tempUpload.any(), updateQuestion);
+router.delete('/questions/:id', deleteQuestion);
+
+// Voting Session Management
+router.post('/voting-session/start', startVotingSession);
+router.post('/voting-session/end', endVotingSession);
+router.get('/voting-session/status', getVotingSessionStatus);
+
+// Other Admin Routes
 router.get('/results', getResults);
 router.get('/statistics', getStatistics);
-router.put('/questions/:id', tempUpload.any(), updateQuestion); // Keep multipart for edit
-router.patch('/questions/:id/status', updateQuestionStatus);
-router.delete('/questions/:id', deleteQuestion);
+router.post('/nominees/:nomineeId/image', tempUpload.single('image'), uploadNomineeImage);
 
 export default router; 

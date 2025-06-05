@@ -317,13 +317,11 @@ async function handleQuestionSubmit(e) {
     const formData = {
         title: document.getElementById('questionTitle').value,
         description: document.getElementById('questionDescription').value,
-        duration: parseInt(document.getElementById('votingDuration').value),
         nominees: Array.from(document.querySelectorAll('.nominee-name'))
             .map(input => input.value.trim())
-            .filter(name => name) // Remove empty nominees
+            .filter(name => name)
     };
 
-    // Validate nominees
     if (formData.nominees.length < 2) {
         showToast('At least 2 nominees are required', 'error');
         hideLoading();
@@ -354,7 +352,7 @@ async function handleQuestionSubmit(e) {
         if (response.ok) {
             showToast(`Question ${mode === 'create' ? 'created' : 'updated'} successfully!`, 'success');
             closeQuestionModal();
-            loadQuestions(); // Reload questions list
+            loadQuestions();
         } else {
             showToast(data.error || `Failed to ${mode} question`, 'error');
         }
@@ -626,3 +624,166 @@ document.addEventListener('DOMContentLoaded', function() {
         questionForm.addEventListener('submit', handleQuestionSubmit);
     }
 });
+
+// Add voting session controls to the admin dashboard
+function addVotingSessionControls() {
+    const controlsContainer = document.createElement('div');
+    controlsContainer.className = 'voting-session-controls';
+    controlsContainer.innerHTML = `
+        <div class="session-status">
+            <h2>Voting Session</h2>
+            <div id="sessionStatus">Loading...</div>
+        </div>
+        <div class="session-actions">
+            <div class="duration-input">
+                <label for="sessionDuration">Duration (hours)</label>
+                <input type="number" id="sessionDuration" min="1" max="168" value="24">
+            </div>
+            <button id="startSession" class="btn btn-primary">
+                <i class="fas fa-play"></i> Start Voting
+            </button>
+            <button id="endSession" class="btn btn-danger" style="display: none">
+                <i class="fas fa-stop"></i> End Voting
+            </button>
+        </div>
+    `;
+
+    // Insert at the top of the questions grid
+    const questionsGrid = document.getElementById('questionsGrid');
+    questionsGrid.insertBefore(controlsContainer, questionsGrid.firstChild);
+
+    // Add event listeners
+    document.getElementById('startSession').addEventListener('click', startVotingSession);
+    document.getElementById('endSession').addEventListener('click', endVotingSession);
+
+    // Check current session status
+    checkVotingSessionStatus();
+}
+
+// Check voting session status
+async function checkVotingSessionStatus() {
+    try {
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/status`, {
+            headers: { 'Authorization': `Bearer ${MCA.token}` }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            updateVotingSessionUI(data.data);
+        }
+    } catch (error) {
+        console.error('Error checking session status:', error);
+        showToast('Error checking voting session status', 'error');
+    }
+}
+
+// Update UI based on session status
+function updateVotingSessionUI(data) {
+    const statusDiv = document.getElementById('sessionStatus');
+    const startBtn = document.getElementById('startSession');
+    const endBtn = document.getElementById('endSession');
+    const durationInput = document.getElementById('sessionDuration');
+
+    if (data.isActive && data.session) {
+        const endTime = new Date(data.session.endTime);
+        const timeLeft = getTimeRemaining(endTime);
+        
+        statusDiv.innerHTML = `
+            <div class="active-session">
+                <span class="status-badge active">Active</span>
+                <span class="time-left">${timeLeft}</span>
+            </div>
+        `;
+        
+        startBtn.style.display = 'none';
+        endBtn.style.display = 'block';
+        durationInput.disabled = true;
+    } else {
+        statusDiv.innerHTML = `
+            <div class="inactive-session">
+                <span class="status-badge inactive">Inactive</span>
+                <span>No active voting session</span>
+            </div>
+        `;
+        
+        startBtn.style.display = 'block';
+        endBtn.style.display = 'none';
+        durationInput.disabled = false;
+    }
+}
+
+// Start voting session
+async function startVotingSession() {
+    try {
+        const duration = document.getElementById('sessionDuration').value;
+        
+        if (!duration || duration < 1) {
+            showToast('Please enter a valid duration', 'error');
+            return;
+        }
+
+        showLoading();
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${MCA.token}`
+            },
+            body: JSON.stringify({ duration: parseInt(duration) })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            showToast('Voting session started successfully!', 'success');
+            checkVotingSessionStatus();
+            loadQuestions(); // Refresh questions
+        } else {
+            const error = await response.json();
+            showToast(error.error || 'Failed to start voting session', 'error');
+        }
+    } catch (error) {
+        console.error('Error starting voting session:', error);
+        showToast('Error starting voting session', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// End voting session
+async function endVotingSession() {
+    if (!confirm('Are you sure you want to end the current voting session?')) {
+        return;
+    }
+
+    try {
+        showLoading();
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/end`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${MCA.token}` }
+        });
+
+        if (response.ok) {
+            showToast('Voting session ended successfully!', 'success');
+            checkVotingSessionStatus();
+            loadQuestions(); // Refresh questions
+        } else {
+            const error = await response.json();
+            showToast(error.error || 'Failed to end voting session', 'error');
+        }
+    } catch (error) {
+        console.error('Error ending voting session:', error);
+        showToast('Error ending voting session', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Add voting session controls when loading questions
+const originalLoadQuestions = loadQuestions;
+loadQuestions = async function() {
+    await originalLoadQuestions();
+    if (!document.querySelector('.voting-session-controls')) {
+        addVotingSessionControls();
+    }
+    checkVotingSessionStatus();
+};
