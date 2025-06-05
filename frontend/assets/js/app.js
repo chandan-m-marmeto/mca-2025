@@ -197,17 +197,37 @@ function showSettings() {
     container.innerHTML = `
         <div class="settings-container">
             <div class="settings-card">
-                <h2>Voting Control</h2>
+                <div class="settings-header">
+                    <h2>Voting Control Panel</h2>
+                    <p class="settings-description">Control voting access for all users</p>
+                </div>
+                
+                <div class="voting-status-display" id="votingStatus">
+                    <div class="status-indicator">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Checking status...</span>
+                    </div>
+                </div>
+
                 <div class="settings-actions">
-                    <button id="startVotingBtn" class="btn btn-primary">
-                        <i class="fas fa-play"></i> Start Voting
-                    </button>
-                    <button id="stopVotingBtn" class="btn btn-danger">
-                        <i class="fas fa-stop"></i> Stop Voting
+                    <button id="toggleVotingBtn" class="btn btn-large">
+                        <span class="btn-icon">🔓</span>
+                        <span class="btn-text">Activate Voting</span>
                     </button>
                 </div>
-                <div id="votingStatus" class="voting-status">
-                    Checking status...
+
+                <div class="settings-info">
+                    <div class="info-card">
+                        <div class="info-icon">ℹ️</div>
+                        <div class="info-content">
+                            <h3>How it works</h3>
+                            <ul>
+                                <li>When active, all users can see and vote on questions</li>
+                                <li>When inactive, users cannot access any questions</li>
+                                <li>You can toggle voting access at any time</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -215,17 +235,20 @@ function showSettings() {
 
     container.classList.remove('hidden');
     
-    // Add event listeners
-    document.getElementById('startVotingBtn').addEventListener('click', startVoting);
-    document.getElementById('stopVotingBtn').addEventListener('click', stopVoting);
+    // Add event listener for the toggle button
+    const toggleBtn = document.getElementById('toggleVotingBtn');
+    toggleBtn.addEventListener('click', toggleVoting);
     
     // Check current status
     checkVotingStatus();
 }
 
-async function startVoting() {
+async function toggleVoting() {
+    const toggleBtn = document.getElementById('toggleVotingBtn');
+    const isCurrentlyActive = toggleBtn.classList.contains('active');
+    
     try {
-        const response = await fetch(`${MCA.baseURL}/admin/voting-session/start`, {
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/${isCurrentlyActive ? 'end' : 'start'}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${MCA.token}`,
@@ -234,38 +257,13 @@ async function startVoting() {
         });
 
         if (response.ok) {
-            showToast('Voting started successfully!', 'success');
+            showToast(`Voting ${isCurrentlyActive ? 'deactivated' : 'activated'} successfully!`, 'success');
             checkVotingStatus();
         } else {
-            throw new Error('Failed to start voting');
+            throw new Error(`Failed to ${isCurrentlyActive ? 'deactivate' : 'activate'} voting`);
         }
     } catch (error) {
-        showToast('Failed to start voting: ' + error.message, 'error');
-    }
-}
-
-async function stopVoting() {
-    if (!confirm('Are you sure you want to stop voting? This will end the session for all users.')) {
-        return;
-    }
-
-    try {
-        const response = await fetch(`${MCA.baseURL}/admin/voting-session/end`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${MCA.token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (response.ok) {
-            showToast('Voting stopped successfully!', 'success');
-            checkVotingStatus();
-        } else {
-            throw new Error('Failed to stop voting');
-        }
-    } catch (error) {
-        showToast('Failed to stop voting: ' + error.message, 'error');
+        showToast(error.message, 'error');
     }
 }
 
@@ -279,19 +277,27 @@ async function checkVotingStatus() {
 
         if (response.ok) {
             const data = await response.json();
-            const statusDiv = document.getElementById('votingStatus');
-            const startBtn = document.getElementById('startVotingBtn');
-            const stopBtn = document.getElementById('stopVotingBtn');
+            const statusDot = document.querySelector('.status-dot');
+            const statusText = document.querySelector('.status-text');
+            const toggleBtn = document.getElementById('toggleVotingBtn');
             
-            if (statusDiv && startBtn && stopBtn) {
+            if (statusDot && statusText && toggleBtn) {
                 if (data.isActive) {
-                    statusDiv.innerHTML = `<span class="status-active">🟢 Voting is ACTIVE</span>`;
-                    startBtn.style.display = 'none';
-                    stopBtn.style.display = 'block';
+                    statusDot.classList.add('active');
+                    statusText.textContent = 'Voting is ACTIVE';
+                    toggleBtn.classList.add('active');
+                    toggleBtn.innerHTML = `
+                        <span class="btn-icon">🔒</span>
+                        <span class="btn-text">Deactivate Voting</span>
+                    `;
                 } else {
-                    statusDiv.innerHTML = `<span class="status-inactive">🔴 Voting is INACTIVE</span>`;
-                    startBtn.style.display = 'block';
-                    stopBtn.style.display = 'none';
+                    statusDot.classList.remove('active');
+                    statusText.textContent = 'Voting is INACTIVE';
+                    toggleBtn.classList.remove('active');
+                    toggleBtn.innerHTML = `
+                        <span class="btn-icon">🔓</span>
+                        <span class="btn-text">Activate Voting</span>
+                    `;
                 }
             }
         } else {
