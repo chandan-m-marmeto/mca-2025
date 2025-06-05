@@ -405,7 +405,7 @@ async function toggleVoting() {
             return;
         }
 
-        // Update UI immediately to show action is in progress
+        // Update UI immediately to show action in progress
         toggleBtn.disabled = true;
         toggleBtn.innerHTML = `
             <span class="btn-icon">⚡</span>
@@ -424,22 +424,52 @@ async function toggleVoting() {
             body: JSON.stringify(body)
         });
 
+        const data = await response.json();
+
         if (response.ok) {
-            // Update UI immediately after successful response
             updateVotingStatus(!isCurrentlyActive, durationInput.value);
             showToast(`Voting ${isCurrentlyActive ? 'deactivated' : 'activated'} successfully!`, 'success');
         } else {
-            const data = await response.json();
-            throw new Error(data.error || `Failed to ${isCurrentlyActive ? 'deactivate' : 'activate'} voting`);
+            // If server says another session is active, update UI to reflect that
+            if (data.error && data.error.includes('already active')) {
+                updateVotingStatus(true);
+                showToast('A voting session is currently active', 'info');
+            } else {
+                throw new Error(data.error || `Failed to ${isCurrentlyActive ? 'deactivate' : 'activate'} voting`);
+            }
         }
     } catch (error) {
         showToast(error.message, 'error');
-        // Reset button state on error
+        // On error, refresh status from server to ensure UI is correct
+        checkVotingStatus();
+    } finally {
         toggleBtn.disabled = false;
-        toggleBtn.innerHTML = `
-            <span class="btn-icon">${isCurrentlyActive ? '🔒' : '🔓'}</span>
-            <span class="btn-text">${isCurrentlyActive ? 'Deactivate Voting' : 'Activate Voting'}</span>
-        `;
+    }
+}
+
+async function checkVotingStatus() {
+    try {
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/status`, {
+            headers: {
+                'Authorization': `Bearer ${MCA.token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // If server indicates session is active, update UI regardless of current state
+            if (data.isActive || (data.error && data.error.includes('already active'))) {
+                updateVotingStatus(true, data.duration);
+            } else {
+                updateVotingStatus(false);
+            }
+        } else {
+            throw new Error('Failed to check voting status');
+        }
+    } catch (error) {
+        console.error('Status check error:', error);
+        showToast('Failed to check voting status: ' + error.message, 'error');
     }
 }
 
@@ -453,6 +483,7 @@ function updateVotingStatus(isActive, duration = null) {
 
     if (statusDot && statusText && toggleBtn && durationInput && durationWrapper) {
         if (isActive) {
+            // Update UI to show active state
             statusDot.classList.add('active');
             statusText.textContent = 'Voting is ACTIVE';
             toggleBtn.classList.add('active');
@@ -464,11 +495,18 @@ function updateVotingStatus(isActive, duration = null) {
             durationWrapper.classList.add('hidden');
             durationInput.disabled = true;
 
+            // Clear any existing interval
+            const existingInterval = timeRemaining.dataset.intervalId;
+            if (existingInterval) {
+                clearInterval(parseInt(existingInterval));
+            }
+
             if (duration) {
                 const endTime = new Date(Date.now() + duration * 60 * 60 * 1000);
                 updateTimeRemaining(endTime);
             }
         } else {
+            // Update UI to show inactive state
             statusDot.classList.remove('active');
             statusText.textContent = 'Voting is INACTIVE';
             toggleBtn.classList.remove('active');
@@ -480,6 +518,12 @@ function updateVotingStatus(isActive, duration = null) {
             durationWrapper.classList.remove('hidden');
             durationInput.disabled = false;
             timeRemaining.textContent = '';
+
+            // Clear any existing interval
+            const existingInterval = timeRemaining.dataset.intervalId;
+            if (existingInterval) {
+                clearInterval(parseInt(existingInterval));
+            }
         }
     }
 }
@@ -508,25 +552,6 @@ function updateTimeRemaining(endTime) {
     
     // Store the interval ID to clear it later if needed
     timeRemainingElement.dataset.intervalId = intervalId;
-}
-
-async function checkVotingStatus() {
-    try {
-        const response = await fetch(`${MCA.baseURL}/admin/voting-session/status`, {
-            headers: {
-                'Authorization': `Bearer ${MCA.token}`
-            }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            updateVotingStatus(data.isActive, data.duration);
-        } else {
-            throw new Error('Failed to check voting status');
-        }
-    } catch (error) {
-        showToast('Failed to check voting status: ' + error.message, 'error');
-    }
 }
 
 async function verifyToken() {
