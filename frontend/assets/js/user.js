@@ -154,21 +154,24 @@ function displayCurrentUserQuestion() {
                         fullData: nominee
                     });
 
-                    // Use the full image URL from the API response
-                    const imageUrl = nominee.image.startsWith('http') 
-                        ? nominee.image 
-                        : `${MCA.staticURL}${nominee.image}`;
+                    // Get the image ID from the path
+                    const imageMatch = nominee.image.match(/nominee-(\d+)-(\d+)\.jpeg$/);
+                    const imageId = imageMatch ? `${imageMatch[1]}-${imageMatch[2]}` : nomineeId;
+                    
+                    // Construct API URL for image
+                    const imageUrl = `${MCA.baseURL}/images/nominee/${imageId}`;
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
                              data-nominee-id="${nomineeId}"
                              onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
                             <div class="nominee-avatar">
-                                <img src="${imageUrl}" 
+                                <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200' fill='%23f0f0f0'/></svg>"
                                      alt="${nominee.name}" 
-                                     class="nominee-avatar-img"
-                                     onerror="handleImageError(this, '${nomineeName}')"
-                                     referrerpolicy="no-referrer">
+                                     class="nominee-avatar-img loading"
+                                     data-image-url="${imageUrl}"
+                                     onload="loadNomineeImage(this)"
+                                     onerror="handleImageError(this, '${nomineeName}')">
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
@@ -503,6 +506,35 @@ function loadUserProfile() {
     };
 })();
 
+// Load nominee image with proper headers
+async function loadNomineeImage(img) {
+    if (!img.dataset.imageUrl) return;
+    
+    try {
+        const response = await fetch(img.dataset.imageUrl, {
+            headers: {
+                'Authorization': `Bearer ${MCA.token}`,
+                'Accept': 'image/jpeg,image/png,image/webp,image/*'
+            }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load image');
+        
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        
+        img.onload = () => {
+            img.classList.remove('loading');
+            URL.revokeObjectURL(img.src); // Clean up the old object URL
+        };
+        
+        img.src = objectUrl;
+    } catch (error) {
+        console.error('Failed to load image:', error);
+        handleImageError(img, img.alt);
+    }
+}
+
 // Handle image loading errors with better SVG
 function handleImageError(img, nomineeName) {
     console.error('Failed to load image for nominee:', nomineeName);
@@ -521,56 +553,13 @@ function handleImageError(img, nomineeName) {
         <text x="100" y="120" fill="${colors.text}" font-size="80" 
               text-anchor="middle" font-family="system-ui, -apple-system, sans-serif"
               font-weight="500">${initial}</text>
-    </svg>`.replace('#', '%23');
+    </svg>`.replace(/#/g, '%23');
     
     img.src = svg;
     img.onerror = null;
+    img.classList.remove('loading');
     img.parentElement.classList.add('image-load-failed');
 }
 
-// Global function to load images with authorization
-window.loadImageWithAuth = async (imgElement, url) => {
-    try {
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': `Bearer ${MCA.token}`
-            }
-        });
-        
-        if (!response.ok) throw new Error('Image load failed');
-        
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        imgElement.src = blobUrl;
-    } catch (error) {
-        console.error('Failed to load image:', error);
-        handleImageError(imgElement, imgElement.alt);
-    }
-};
-
-function tryAlternateImageUrls(img, nomineeName) {
-    console.log('Image load failed for:', nomineeName);
-    console.log('Current URL:', img.src);
-    console.log('Full URL:', img.dataset.fullUrl);
-    console.log('Alternate URL:', img.dataset.altUrl);
-
-    // If we're using the relative URL, try the full URL
-    if (!img.src.startsWith('http')) {
-        console.log('Trying full URL...');
-        img.src = img.dataset.fullUrl;
-        return;
-    }
-
-    // If full URL failed, try alternate URL
-    if (img.src === img.dataset.fullUrl) {
-        console.log('Trying alternate URL...');
-        img.src = img.dataset.altUrl;
-        return;
-    }
-
-    // If all URLs failed, use default avatar
-    console.error('All image URLs failed for nominee:', nomineeName);
-    img.src = '/assets/images/default-avatar.jpg';
-    img.onerror = null; // Prevent infinite error loop
-    img.parentElement.classList.add('image-load-failed');
-}
+// Make loadNomineeImage available globally
+window.loadNomineeImage = loadNomineeImage;
