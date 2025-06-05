@@ -153,18 +153,40 @@ function displayCurrentUserQuestion() {
                         image: nominee.image,
                         fullData: nominee
                     });
+
+                    // Create a blob URL for the image after fetching with auth
+                    const imageUrl = nominee.image;
+                    const fullImageUrl = `${MCA.staticURL}${nominee.image}`;
                     
-                    // Construct image URL using the API endpoint
-                    const imageUrl = `${MCA.baseURL}/nominees/${nomineeId}/image`;
+                    // Function to load image with authorization
+                    const loadImageWithAuth = async (imgElement, url) => {
+                        try {
+                            const response = await fetch(url, {
+                                headers: {
+                                    'Authorization': `Bearer ${MCA.token}`
+                                }
+                            });
+                            
+                            if (!response.ok) throw new Error('Image load failed');
+                            
+                            const blob = await response.blob();
+                            const blobUrl = URL.createObjectURL(blob);
+                            imgElement.src = blobUrl;
+                        } catch (error) {
+                            console.error('Failed to load image:', error);
+                            handleImageError(imgElement, nomineeName);
+                        }
+                    };
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
                              data-nominee-id="${nomineeId}"
                              onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
                             <div class="nominee-avatar">
-                                <img src="${imageUrl}" 
+                                <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='100%' height='100%' fill='%23f0f0f0'/></svg>"
                                      alt="${nominee.name}" 
                                      class="nominee-avatar-img"
+                                     onload="loadImageWithAuth(this, '${fullImageUrl}')"
                                      onerror="handleImageError(this, '${nomineeName}')">
                             </div>
                             <div class="nominee-info">
@@ -490,12 +512,32 @@ function handleImageError(img, nomineeName) {
     console.error('Failed to load image for nominee:', nomineeName, 'URL:', img.src);
     
     // Set a default placeholder
-    img.src = `${MCA.staticURL}/assets/images/placeholder-avatar.png`;
+    img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="100%" height="100%" fill="%23f0f0f0"/><text x="50%" y="50%" fill="%23999" text-anchor="middle" dominant-baseline="middle" font-family="system-ui">' + nomineeName.charAt(0) + '</text></svg>';
     img.onerror = null; // Prevent infinite error loop
     
     // Add a class to style the failed image container
     img.parentElement.classList.add('image-load-failed');
 }
+
+// Global function to load images with authorization
+window.loadImageWithAuth = async (imgElement, url) => {
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${MCA.token}`
+            }
+        });
+        
+        if (!response.ok) throw new Error('Image load failed');
+        
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        imgElement.src = blobUrl;
+    } catch (error) {
+        console.error('Failed to load image:', error);
+        handleImageError(imgElement, imgElement.alt);
+    }
+};
 
 function tryAlternateImageUrls(img, nomineeName) {
     console.log('Image load failed for:', nomineeName);
