@@ -7,6 +7,21 @@ let userVotes = {};
 async function loadUserQuestions() {
     try {
         showLoading();
+        
+        // First check if voting is active
+        const statusResponse = await fetch(`${MCA.baseURL}/vote/session/status`, {
+            headers: { 'Authorization': `Bearer ${MCA.token}` }
+        });
+        
+        const statusData = await statusResponse.json();
+        
+        if (!statusData.isActive) {
+            displayNoQuestionsState();
+            hideLoading();
+            return;
+        }
+        
+        // If voting is active, load questions
         const response = await fetch(`${MCA.baseURL}/vote/questions`, {
             headers: { 'Authorization': `Bearer ${MCA.token}` }
         });
@@ -14,7 +29,6 @@ async function loadUserQuestions() {
         if (response.ok) {
             const data = await response.json();
             console.log('API Response:', data);
-            console.log('MCA Config:', MCA);
             
             // Handle both old and new response formats
             currentQuestions = data.questions || data || [];

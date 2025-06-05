@@ -486,9 +486,9 @@ async function checkVotingStatus() {
         const data = await response.json();
 
         if (response.ok) {
-            // If server indicates session is active, update UI regardless of current state
-            if (data.isActive || (data.error && data.error.includes('already active'))) {
-                updateVotingStatus(true, data.duration);
+            // Simply update UI based on session status
+            if (data.data.isActive) {
+                updateVotingStatus(true, data.data.endTime);
             } else {
                 updateVotingStatus(false);
             }
@@ -501,7 +501,7 @@ async function checkVotingStatus() {
     }
 }
 
-function updateVotingStatus(isActive, duration = null) {
+function updateVotingStatus(isActive, endTime = null) {
     const statusDot = document.querySelector('.status-dot');
     const statusText = document.querySelector('.status-text');
     const toggleBtn = document.getElementById('toggleVotingBtn');
@@ -524,14 +524,20 @@ function updateVotingStatus(isActive, duration = null) {
             durationInput.disabled = true;
 
             // Clear any existing interval
-            const existingInterval = timeRemaining.dataset.intervalId;
-            if (existingInterval) {
-                clearInterval(parseInt(existingInterval));
+            if (timeRemaining.dataset.intervalId) {
+                clearInterval(parseInt(timeRemaining.dataset.intervalId));
             }
 
-            if (duration) {
-                const endTime = new Date(Date.now() + duration * 60 * 60 * 1000);
-                updateTimeRemaining(endTime);
+            // Update time remaining if endTime is provided
+            if (endTime) {
+                const end = new Date(endTime);
+                updateTimeRemaining(end);
+            }
+
+            // Refresh questions list if we're on the user dashboard
+            if (document.getElementById('user-dashboard') && 
+                !document.getElementById('user-dashboard').classList.contains('hidden')) {
+                loadUserQuestions();
             }
         } else {
             // Update UI to show inactive state
@@ -548,9 +554,8 @@ function updateVotingStatus(isActive, duration = null) {
             timeRemaining.textContent = '';
 
             // Clear any existing interval
-            const existingInterval = timeRemaining.dataset.intervalId;
-            if (existingInterval) {
-                clearInterval(parseInt(existingInterval));
+            if (timeRemaining.dataset.intervalId) {
+                clearInterval(parseInt(timeRemaining.dataset.intervalId));
             }
         }
     }

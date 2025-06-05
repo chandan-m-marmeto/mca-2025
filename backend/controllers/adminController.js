@@ -145,6 +145,15 @@ export const createQuestion = async (req, res) => {
 // Start a new voting session
 export const startVotingSession = async (req, res) => {
     try {
+        // First check if there's an active session
+        const existingSession = await VotingSession.findOne({ isActive: true });
+        if (existingSession) {
+            return res.status(400).json({
+                success: false,
+                error: 'Another voting session is already active'
+            });
+        }
+
         const { duration } = req.body;
         
         if (!duration || duration < 1) {
@@ -163,9 +172,6 @@ export const startVotingSession = async (req, res) => {
             startTime,
             endTime
         }).save();
-
-        // Activate all questions
-        await Question.updateMany({}, { isActive: true });
 
         res.json({
             success: true,
@@ -224,7 +230,7 @@ export const getVotingSessionStatus = async (req, res) => {
             success: true,
             data: {
                 isActive: !!session,
-                session: session || null
+                endTime: session?.endTime || null
             }
         });
     } catch (error) {
