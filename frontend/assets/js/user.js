@@ -154,16 +154,8 @@ function displayCurrentUserQuestion() {
                         fullData: nominee
                     });
                     
-                    // Try different URL formats
-                    const imageUrl = nominee.image;
-                    const fullImageUrl = `${MCA.staticURL}${nominee.image}`;
-                    const alternateUrl = `${MCA.baseURL}/uploads/nominees/${nomineeId}.jpeg`;
-                    
-                    console.log('Attempting image URLs:', {
-                        relative: imageUrl,
-                        full: fullImageUrl,
-                        alternate: alternateUrl
-                    });
+                    // Construct image URL using the API endpoint
+                    const imageUrl = `${MCA.baseURL}/nominees/${nomineeId}/image`;
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
@@ -173,9 +165,7 @@ function displayCurrentUserQuestion() {
                                 <img src="${imageUrl}" 
                                      alt="${nominee.name}" 
                                      class="nominee-avatar-img"
-                                     data-full-url="${fullImageUrl}"
-                                     data-alt-url="${alternateUrl}"
-                                     onerror="tryAlternateImageUrls(this, '${nomineeName}')">
+                                     onerror="handleImageError(this, '${nomineeName}')">
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
@@ -499,9 +489,9 @@ function loadUserProfile() {
 function handleImageError(img, nomineeName) {
     console.error('Failed to load image for nominee:', nomineeName, 'URL:', img.src);
     
-    // Set a default avatar or placeholder
-    img.src = `${MCA.staticURL}/assets/images/default-avatar.png`;
-    img.onerror = null; // Prevent infinite error loop if default image also fails
+    // Set a default placeholder
+    img.src = `${MCA.staticURL}/assets/images/placeholder-avatar.png`;
+    img.onerror = null; // Prevent infinite error loop
     
     // Add a class to style the failed image container
     img.parentElement.classList.add('image-load-failed');
