@@ -19,40 +19,45 @@ function showAnalytics() {
 }
 
 function showSettings() {
-    const container = document.getElementById('settings-section') || document.createElement('div');
-    container.id = 'settings-section';
-    container.className = 'content-section active';
+    // Hide all sections first
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.style.display = 'none';
+    });
+
+    // Show settings section
+    const settingsSection = document.getElementById('settings-section') || document.createElement('div');
+    settingsSection.id = 'settings-section';
+    settingsSection.className = 'content-section';
+    settingsSection.style.display = 'block';
     
-    container.innerHTML = `
-        <div class="settings-container">
-            <div class="settings-card">
-                <h2>Voting Control Panel</h2>
-                <p class="settings-description">Control the voting session for all questions at once.</p>
-                <div class="settings-actions">
-                    <button id="activateVotingBtn" class="btn btn-primary btn-large" onclick="makeAllQuestionsLive()">
-                        <i class="fas fa-play-circle"></i>
-                        Activate All Questions
-                    </button>
-                    <button id="deactivateVotingBtn" class="btn btn-danger btn-large" onclick="stopAllVoting()">
-                        <i class="fas fa-stop-circle"></i>
-                        Stop All Voting
-                    </button>
-                </div>
-                <div class="settings-status" id="votingStatus">
-                    Current Status: <span class="status-text">Checking...</span>
-                </div>
+    settingsSection.innerHTML = `
+        <div class="settings-panel">
+            <h2>Voting Control Panel</h2>
+            <div class="control-buttons">
+                <button id="startVotingBtn" class="btn btn-primary btn-large">
+                    <i class="fas fa-play"></i> Start Voting
+                </button>
+                <button id="stopVotingBtn" class="btn btn-danger btn-large" style="display: none;">
+                    <i class="fas fa-stop"></i> Stop Voting
+                </button>
+            </div>
+            <div class="status-panel">
+                <p>Current Status: <span id="votingStatusText">Checking...</span></p>
             </div>
         </div>
     `;
-    
-    // Replace the current content
+
+    // Add to page if not already there
     const contentBody = document.querySelector('.content-body');
-    if (contentBody) {
-        contentBody.innerHTML = '';
-        contentBody.appendChild(container);
+    if (!contentBody.contains(settingsSection)) {
+        contentBody.appendChild(settingsSection);
     }
-    
-    // Check current voting status
+
+    // Add event listeners
+    document.getElementById('startVotingBtn').addEventListener('click', startVoting);
+    document.getElementById('stopVotingBtn').addEventListener('click', stopVoting);
+
+    // Check current status
     checkVotingStatus();
 }
 
@@ -129,79 +134,46 @@ function displayCurrentAdminQuestion() {
     const question = adminQuestions[currentAdminQuestionIndex];
     const questionsGrid = document.getElementById('questionsGrid');
     
-    const totalVotes = question.nominees.reduce((sum, n) => sum + n.votes, 0);
-    
     questionsGrid.innerHTML = `
-        <div class="centered-admin-container">
-            <!-- Centered Question Card -->
-            <div class="centered-question-card">
-                <!-- Question Header - Centered -->
-                <div class="centered-header">
-                    <h1 class="centered-title">${question.title}</h1>
-                    <span class="centered-status ${question.isActive ? 'active' : 'inactive'}">
-                        ${question.isActive ? 'ACTIVE' : 'INACTIVE'}
-                    </span>
-                </div>
+        <div class="question-card">
+            <div class="question-header">
+                <h2>${question.title}</h2>
+                <span class="status ${question.isActive ? 'active' : 'inactive'}">
+                    ${question.isActive ? 'Active' : 'Inactive'}
+                </span>
+            </div>
 
-                <!-- Meta Information - Centered -->
-                <div class="centered-meta">
-                    <div class="meta-item">
-                        <i class="fas fa-vote-yea"></i>
-                        <span>${totalVotes} votes</span>
-                    </div>
-                </div>
+            <div class="question-description">
+                <p>${question.description}</p>
+            </div>
 
-                <!-- Description - Centered -->
-                <div class="centered-description">
-                    <h3>📝 Description</h3>
-                    <div class="description-content">${question.description}</div>
+            <div class="nominees-section">
+                <h3>Nominees (${question.nominees.length})</h3>
+                <div class="nominees-grid">
+                    ${question.nominees.map((nominee, index) => `
+                        <div class="nominee-card">
+                            <div class="nominee-avatar">
+                                <div class="nominee-initial">${nominee.name.charAt(0).toUpperCase()}</div>
+                            </div>
+                            <div class="nominee-info">
+                                <h4>${nominee.name}</h4>
+                                <span class="nominee-votes">${nominee.votes || 0} votes</span>
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
+            </div>
 
-                <!-- All Nominees - Centered Grid -->
-                <div class="centered-nominees">
-                    <h3>👥 Nominees (${question.nominees.length})</h3>
-                    <div class="nominees-full-grid">
-                        ${question.nominees.map((nominee, index) => {
-                            const percentage = totalVotes > 0 ? ((nominee.votes / totalVotes) * 100).toFixed(1) : 0;
-                            return `
-                                <div class="full-nominee-card">
-                                    <div class="nominee-header">
-                                        <div class="nominee-avatar">
-                                            <div class="nominee-initial-avatar">${(nominee.name || 'U').charAt(0).toUpperCase()}</div>
-                                        </div>
-                                        <div class="nominee-title">
-                                            <h4>${nominee.name}</h4>
-                                            <span class="rank">#${index + 1}</span>
-                                        </div>
-                                    </div>
-                                    <div class="nominee-stats-full">
-                                        <div class="votes-display">${nominee.votes} votes</div>
-                                        <div class="progress-bar-full">
-                                            <div class="progress-fill-full" style="width: ${percentage}%"></div>
-                                        </div>
-                                        <div class="percentage-display">${percentage}%</div>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-
-                <!-- CRUD Action Buttons - Centered -->
-                <div class="centered-crud-actions">
-                    <button class="crud-btn edit-btn" onclick="editQuestion('${question.id}')">
-                        <i class="fas fa-edit"></i>
-                        <span>Edit Question</span>
-                    </button>
-                    <button class="crud-btn results-btn" onclick="viewResults('${question.id}')">
-                        <i class="fas fa-chart-line"></i>
-                        <span>View Results</span>
-                    </button>
-                    <button class="crud-btn delete-btn" onclick="deleteQuestion('${question.id}')">
-                        <i class="fas fa-trash"></i>
-                        <span>Delete Question</span>
-                    </button>
-                </div>
+            <div class="question-actions">
+                <button onclick="editQuestion('${question.id}')" class="btn btn-edit">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button onclick="viewResults('${question.id}')" class="btn btn-view">
+                    <i class="fas fa-chart-bar"></i> Results
+                </button>
+                <button onclick="deleteQuestion('${question.id}')" class="btn btn-delete">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
             </div>
         </div>
     `;
@@ -221,118 +193,93 @@ function nextAdminQuestion() {
     }
 }
 
-function getTimeRemaining(endTime) {
-    const now = new Date();
-    const end = new Date(endTime);
-    const diff = end - now;
-    
-    if (diff <= 0) return 'Expired';
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
-    if (days > 0) return `${days}d ${hours}h left`;
-    if (hours > 0) return `${hours}h left`;
-    return 'Less than 1h left';
-}
-
 // Question CRUD operations
 function showCreateQuestion() {
-    document.getElementById('modalTitle').textContent = 'Create New Question';
-    const form = document.getElementById('questionForm');
-    form.reset();
-    form.dataset.mode = 'create';
-    delete form.dataset.questionId;
-    
-    form.innerHTML = `
-        <div class="form-group">
-            <label for="questionTitle">Question Title</label>
-            <input type="text" id="questionTitle" required>
-        </div>
-        <div class="form-group">
-            <label for="questionDescription">Description</label>
-            <textarea id="questionDescription" required></textarea>
-        </div>
-        <div class="nominees-section">
-            <h3>Nominees</h3>
-            <div id="nomineesList"></div>
-            <button type="button" class="btn btn-secondary" onclick="addNominee()">
-                <i class="fas fa-plus"></i> Add Nominee
-            </button>
-        </div>
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Create Question</button>
-            <button type="button" class="btn btn-secondary" onclick="closeQuestionModal()">Cancel</button>
-        </div>
-    `;
-    
-    clearNominees();
-    addNominee('');
-    addNominee('');
-    
-    document.getElementById('questionModal').classList.remove('hidden');
-}
-
-async function editQuestion(questionId) {
-    try {
-        showLoading();
-        const question = adminQuestions.find(q => q.id === questionId);
-        
-        if (question) {
-            document.getElementById('modalTitle').textContent = 'Edit Question';
-            const form = document.getElementById('questionForm');
-            form.dataset.mode = 'edit';
-            form.dataset.questionId = questionId;
-            
-            form.innerHTML = `
+    const modal = document.getElementById('questionModal');
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Question</h2>
+                <button onclick="closeModal()" class="close-btn">&times;</button>
+            </div>
+            <form id="questionForm" onsubmit="handleQuestionSubmit(event)">
                 <div class="form-group">
-                    <label for="questionTitle">Question Title</label>
-                    <input type="text" id="questionTitle" value="${question.title}" required>
+                    <label>Question Title</label>
+                    <input type="text" name="title" required>
                 </div>
                 <div class="form-group">
-                    <label for="questionDescription">Description</label>
-                    <textarea id="questionDescription" required>${question.description}</textarea>
+                    <label>Description</label>
+                    <textarea name="description" required></textarea>
                 </div>
-                <div class="nominees-section">
+                <div class="nominees-container">
                     <h3>Nominees</h3>
                     <div id="nomineesList"></div>
-                    <button type="button" class="btn btn-secondary" onclick="addNominee()">
-                        <i class="fas fa-plus"></i> Add Nominee
+                    <button type="button" onclick="addNominee()" class="btn btn-secondary">
+                        Add Nominee
                     </button>
                 </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Update Question</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeQuestionModal()">Cancel</button>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Create Question</button>
+                    <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
                 </div>
-            `;
-            
-            clearNominees();
-            question.nominees.forEach(nominee => {
-                addNominee(nominee.name);
-            });
-            
-            document.getElementById('questionModal').classList.remove('hidden');
-        }
-    } catch (error) {
-        console.error('Error loading question:', error);
-        showToast('Error loading question', 'error');
-    } finally {
-        hideLoading();
-    }
+            </form>
+        </div>
+    `;
+
+    addNominee();
+    addNominee();
+    modal.style.display = 'block';
 }
 
-async function handleQuestionSubmit(e) {
-    e.preventDefault();
+function editQuestion(questionId) {
+    const question = adminQuestions.find(q => q.id === questionId);
+    if (!question) return;
+
+    const modal = document.getElementById('questionModal');
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Question</h2>
+                <button onclick="closeModal()" class="close-btn">&times;</button>
+            </div>
+            <form id="questionForm" onsubmit="handleQuestionSubmit(event)">
+                <input type="hidden" name="questionId" value="${question.id}">
+                <div class="form-group">
+                    <label>Question Title</label>
+                    <input type="text" name="title" value="${question.title}" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" required>${question.description}</textarea>
+                </div>
+                <div class="nominees-container">
+                    <h3>Nominees</h3>
+                    <div id="nomineesList"></div>
+                    <button type="button" onclick="addNominee()" class="btn btn-secondary">
+                        Add Nominee
+                    </button>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Update Question</button>
+                    <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    question.nominees.forEach(nominee => addNominee(nominee.name));
+    modal.style.display = 'block';
+}
+
+async function handleQuestionSubmit(event) {
+    event.preventDefault();
     showLoading();
 
-    const form = e.target;
-    const mode = form.dataset.mode || 'create';
-    const questionId = form.dataset.questionId;
-
+    const form = event.target;
     const formData = {
-        title: document.getElementById('questionTitle').value,
-        description: document.getElementById('questionDescription').value,
-        nominees: Array.from(document.querySelectorAll('.nominee-name'))
+        title: form.querySelector('[name="title"]').value,
+        description: form.querySelector('[name="description"]').value,
+        nominees: Array.from(form.querySelectorAll('.nominee-input'))
             .map(input => input.value.trim())
             .filter(name => name)
     };
@@ -343,18 +290,12 @@ async function handleQuestionSubmit(e) {
         return;
     }
 
-    try {
-        let url, method;
-        if (mode === 'create') {
-            url = `${MCA.baseURL}/admin/questions`;
-            method = 'POST';
-        } else {
-            url = `${MCA.baseURL}/admin/questions/${questionId}`;
-            method = 'PUT';
-        }
+    const questionId = form.querySelector('[name="questionId"]')?.value;
+    const isEdit = !!questionId;
 
-        const response = await fetch(url, {
-            method: method,
+    try {
+        const response = await fetch(`${MCA.baseURL}/admin/questions${isEdit ? `/${questionId}` : ''}`, {
+            method: isEdit ? 'PUT' : 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${MCA.token}`
@@ -362,18 +303,16 @@ async function handleQuestionSubmit(e) {
             body: JSON.stringify(formData)
         });
 
-        const data = await response.json();
-
         if (response.ok) {
-            showToast(`Question ${mode === 'create' ? 'created' : 'updated'} successfully!`, 'success');
-            closeQuestionModal();
+            showToast(`Question ${isEdit ? 'updated' : 'created'} successfully!`, 'success');
+            closeModal();
             loadQuestions();
         } else {
-            showToast(data.error || `Failed to ${mode} question`, 'error');
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to save question');
         }
     } catch (error) {
-        console.error(`Error ${mode}ing question:`, error);
-        showToast(`Error ${mode}ing question`, 'error');
+        showToast(error.message, 'error');
     } finally {
         hideLoading();
     }
@@ -499,8 +438,8 @@ async function viewResults(questionId) {
 }
 
 // Modal functions
-function closeQuestionModal() {
-    document.getElementById('questionModal').classList.add('hidden');
+function closeModal() {
+    document.getElementById('questionModal').style.display = 'none';
 }
 
 function clearNominees() {
@@ -848,26 +787,72 @@ async function checkVotingStatus() {
         const response = await fetch(`${MCA.baseURL}/admin/voting-session/status`, {
             headers: { 'Authorization': `Bearer ${MCA.token}` }
         });
-        
+
         if (response.ok) {
             const data = await response.json();
-            const statusElement = document.querySelector('#votingStatus .status-text');
-            const activateBtn = document.getElementById('activateVotingBtn');
-            const deactivateBtn = document.getElementById('deactivateVotingBtn');
-            
+            const startBtn = document.getElementById('startVotingBtn');
+            const stopBtn = document.getElementById('stopVotingBtn');
+            const statusIndicator = document.querySelector('.status-indicator');
+
             if (data.data.isActive) {
-                statusElement.textContent = 'Voting is Active';
-                statusElement.className = 'status-text active';
-                activateBtn.style.display = 'none';
-                deactivateBtn.style.display = 'block';
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'block';
+                statusIndicator.textContent = 'Voting is Active';
+                statusIndicator.className = 'status-indicator active';
             } else {
-                statusElement.textContent = 'Voting is Inactive';
-                statusElement.className = 'status-text inactive';
-                activateBtn.style.display = 'block';
-                deactivateBtn.style.display = 'none';
+                startBtn.style.display = 'block';
+                stopBtn.style.display = 'none';
+                statusIndicator.textContent = 'Voting is Inactive';
+                statusIndicator.className = 'status-indicator inactive';
             }
         }
     } catch (error) {
-        console.error('Error checking voting status:', error);
+        console.error('Failed to check voting status:', error);
+    }
+}
+
+async function startVoting() {
+    try {
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/start`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${MCA.token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ duration: 24 }) // Default 24 hours, no user input needed
+        });
+
+        if (response.ok) {
+            showToast('Voting started successfully!', 'success');
+            checkVotingStatus();
+            loadQuestions(); // Refresh questions list
+        } else {
+            throw new Error('Failed to start voting');
+        }
+    } catch (error) {
+        showToast('Failed to start voting', 'error');
+    }
+}
+
+async function stopVoting() {
+    if (!confirm('Are you sure you want to stop voting?')) return;
+    
+    try {
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/end`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${MCA.token}`
+            }
+        });
+
+        if (response.ok) {
+            showToast('Voting stopped successfully!', 'success');
+            checkVotingStatus();
+            loadQuestions(); // Refresh questions list
+        } else {
+            throw new Error('Failed to stop voting');
+        }
+    } catch (error) {
+        showToast('Failed to stop voting', 'error');
     }
 }
