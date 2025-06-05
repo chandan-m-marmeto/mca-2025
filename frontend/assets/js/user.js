@@ -6,6 +6,7 @@ let userVotes = {};
 // Load questions for user voting
 async function loadUserQuestions() {
     try {
+        console.log('Starting to load user questions...');
         showLoading();
         
         // First check if voting is active
@@ -14,31 +15,36 @@ async function loadUserQuestions() {
         });
         
         const statusData = await statusResponse.json();
+        console.log('Voting session status:', statusData);
         
         if (!statusData.data.isActive) {
+            console.log('Voting is not active, displaying no questions state');
             displayNoQuestionsState();
             hideLoading();
             return;
         }
         
         // If voting is active, load questions
+        console.log('Fetching questions from server...');
         const response = await fetch(`${MCA.baseURL}/vote/questions`, {
             headers: { 'Authorization': `Bearer ${MCA.token}` }
         });
         
         if (response.ok) {
             const data = await response.json();
-            console.log('API Response:', data);
+            console.log('Questions loaded from server:', data);
             
             // Handle both old and new response formats
             currentQuestions = data.questions || data || [];
             currentQuestionIndex = 0;
             
+            console.log(`Loaded ${currentQuestions.length} questions`);
+            console.log('First question details:', currentQuestions[0]);
+            
             if (currentQuestions.length > 0) {
-                console.log('First Question:', currentQuestions[0]);
-                console.log('First Nominee:', currentQuestions[0].nominees[0]);
                 displayCurrentUserQuestion();
             } else {
+                console.log('No questions available, showing empty state');
                 displayNoQuestionsState();
             }
         } else {
@@ -120,6 +126,7 @@ function displayErrorState() {
 }
 
 function displayCurrentUserQuestion() {
+    console.log('Displaying current question...');
     const question = currentQuestions[currentQuestionIndex];
     const questionsContainer = document.getElementById('votingQuestions') || document.getElementById('userQuestions');
     
@@ -137,6 +144,14 @@ function displayCurrentUserQuestion() {
         userVote: question.userVote || null
     };
     
+    console.log('Processing question:', {
+        questionId: safeQuestion.id,
+        title: safeQuestion.title,
+        hasUserVoted: !!safeQuestion.userVote,
+        votedFor: safeQuestion.userVote,
+        numberOfNominees: safeQuestion.nominees.length
+    });
+
     questionsContainer.innerHTML = `
         <div class="question-container">
             <!-- Question Header -->
@@ -153,6 +168,12 @@ function displayCurrentUserQuestion() {
                     const nomineeId = nominee.id || nominee._id;
                     const nomineeName = nominee.name || 'Unknown';
                     const isVoted = safeQuestion.userVote === nomineeId;
+                    
+                    console.log(`Nominee ${nomineeName}:`, {
+                        id: nomineeId,
+                        isVoted: isVoted,
+                        isClickable: !safeQuestion.userVote
+                    });
                     
                     return `
                         <div class="nominee-card ${isVoted ? 'selected' : ''}" 
@@ -203,168 +224,22 @@ function displayCurrentUserQuestion() {
             </div>
         </div>
     `;
-
-    // Add CSS if not already present
-    if (!document.getElementById('voting-styles')) {
-        const styles = document.createElement('style');
-        styles.id = 'voting-styles';
-        styles.textContent = `
-            .question-container {
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 20px;
-                position: relative;
-            }
-
-            .question-header {
-                text-align: center;
-                margin-bottom: 40px;
-                padding-top: 20px;
-            }
-
-            .question-content {
-                max-width: 800px;
-                margin: 0 auto;
-            }
-
-            .question-title {
-                font-size: 42px;
-                font-weight: 500;
-                color: #fff;
-                margin-bottom: 20px;
-                line-height: 1.2;
-            }
-
-            .question-description {
-                font-size: 18px;
-                color: rgba(255, 255, 255, 0.8);
-                line-height: 1.5;
-            }
-
-            .nominees-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 30px;
-                margin: 40px 0;
-            }
-
-            .nominee-card {
-                background: rgba(255, 255, 255, 0.05);
-                border-radius: 10px;
-                padding: 20px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                position: relative;
-                border: 2px solid transparent;
-            }
-
-            .nominee-card:hover {
-                background: rgba(255, 255, 255, 0.1);
-            }
-
-            .nominee-card.selected {
-                border-color: #fff;
-                background: rgba(255, 255, 255, 0.15);
-            }
-
-            .nominee-avatar {
-                width: 200px;
-                height: 200px;
-                border-radius: 10px;
-                overflow: hidden;
-                margin-bottom: 15px;
-                background: rgba(255, 255, 255, 0.1);
-            }
-
-            .nominee-avatar-img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-
-            .nominee-name {
-                font-size: 24px;
-                color: #fff;
-                text-align: center;
-                margin: 10px 0;
-            }
-
-            .selected-indicator {
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background: #4CAF50;
-                color: white;
-                width: 24px;
-                height: 24px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 14px;
-            }
-
-            .vote-button-container {
-                text-align: center;
-                margin: 30px 0;
-            }
-
-            .btn-primary {
-                background: #4CAF50;
-                color: white;
-                border: none;
-                padding: 12px 30px;
-                border-radius: 5px;
-                font-size: 16px;
-                cursor: pointer;
-                transition: background 0.3s ease;
-            }
-
-            .btn-primary:hover:not(.btn-disabled) {
-                background: #45a049;
-            }
-
-            .btn-disabled {
-                background: #666;
-                cursor: not-allowed;
-            }
-
-            .navigation-buttons {
-                display: flex;
-                justify-content: center;
-                gap: 20px;
-                margin-top: 20px;
-            }
-
-            .nav-btn {
-                background: transparent;
-                border: 1px solid rgba(255, 255, 255, 0.3);
-                color: white;
-                padding: 8px 20px;
-                border-radius: 5px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-
-            .nav-btn:hover:not(.disabled) {
-                border-color: white;
-            }
-
-            .nav-btn.disabled {
-                opacity: 0.5;
-                cursor: not-allowed;
-            }
-        `;
-        document.head.appendChild(styles);
-    }
+    
+    console.log('Question display updated');
 }
 
 function selectNominee(questionId, nomineeId) {
+    console.log('Selecting nominee:', { questionId, nomineeId });
+    
     const question = currentQuestions[currentQuestionIndex];
-    if (!question || (question.id || question._id) !== questionId || question.userVote) return;
+    if (!question || (question.id || question._id) !== questionId || question.userVote) {
+        console.log('Cannot select nominee:', {
+            questionMissing: !question,
+            wrongQuestion: question && (question.id || question._id) !== questionId,
+            alreadyVoted: question?.userVote
+        });
+        return;
+    }
     
     // Remove previous selection
     document.querySelectorAll('.nominee-card').forEach(card => {
@@ -375,6 +250,7 @@ function selectNominee(questionId, nomineeId) {
     const selectedCard = document.querySelector(`[data-nominee-id="${nomineeId}"]`);
     if (selectedCard) {
         selectedCard.classList.add('selected');
+        console.log('Selected nominee card updated');
     }
     
     // Store the vote
@@ -386,6 +262,7 @@ function selectNominee(questionId, nomineeId) {
         submitBtn.disabled = false;
         submitBtn.classList.remove('btn-disabled');
         submitBtn.innerHTML = 'Submit Vote';
+        console.log('Submit button enabled');
     }
 }
 

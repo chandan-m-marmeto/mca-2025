@@ -17,10 +17,14 @@ router.get('/session/status', getVotingSessionStatus);
 // Get questions for voting
 router.get('/questions', async (req, res) => {
     try {
+        console.log('GET /questions - Starting to fetch questions for user:', req.user._id);
+        
         // First check if voting is active
         const activeSession = await VotingSession.findOne({ isActive: true });
+        console.log('Voting session status:', activeSession ? 'ACTIVE' : 'INACTIVE');
         
         if (!activeSession) {
+            console.log('No active voting session found, returning empty questions array');
             return res.json({ 
                 success: true,
                 questions: [] 
@@ -32,19 +36,29 @@ router.get('/questions', async (req, res) => {
             .populate('nominees')
             .sort({ createdAt: -1 });
         
+        console.log(`Found ${questions.length} questions in database`);
+        
         // Get user's voting history
         const user = await User.findById(req.user._id, 'votingHistory');
         const votingHistory = user.votingHistory || [];
+        console.log('User voting history:', JSON.stringify(votingHistory, null, 2));
         
         // Add user's vote information to each question
         const questionsWithVotes = questions.map(question => {
             const vote = votingHistory.find(v => v.questionId.toString() === question._id.toString());
             const questionObj = question.toObject();
             questionObj.userVote = vote ? vote.votedFor : null;
+            
+            console.log(`Question ${question._id}:`, {
+                title: question.title,
+                hasUserVoted: !!vote,
+                votedFor: vote ? vote.votedFor : 'none'
+            });
+            
             return questionObj;
         });
         
-        console.log(`Found ${questions.length} questions`);
+        console.log('Sending response with processed questions');
         
         res.json({ 
             success: true,
