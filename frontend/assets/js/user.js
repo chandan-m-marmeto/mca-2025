@@ -44,6 +44,17 @@ function displayNoQuestionsState() {
     if (container) {
         container.innerHTML = `
             <div class="no-questions-state">
+                <div class="no-voting-message">
+                    <div class="empty-state">
+                        <div class="empty-icon">🗳️</div>
+                        <h3>No Active Voting Questions</h3>
+                        <p>There are no active voting questions at the moment. Please check back later when voting opens!</p>
+                        <button class="btn btn-primary" onclick="loadUserQuestions()">
+                            <i class="fas fa-refresh"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
                 <div class="mca-memories">
                     <div class="memories-header">
                         <h2>🏆 MCA Memories</h2>
@@ -71,16 +82,6 @@ function displayNoQuestionsState() {
                             <h3>Team Spirit</h3>
                             <p>Honoring collaboration and teamwork</p>
                         </div>
-                    </div>
-                </div>
-                <div class="no-voting-message">
-                    <div class="empty-state">
-                        <div class="empty-icon">🗳️</div>
-                        <h3>No Active Voting Questions</h3>
-                        <p>There are no active voting questions at the moment. Please check back later when voting opens!</p>
-                        <button class="btn btn-primary" onclick="loadUserQuestions()">
-                            <i class="fas fa-refresh"></i> Refresh
-                        </button>
                     </div>
                 </div>
             </div>
