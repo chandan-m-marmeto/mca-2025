@@ -186,7 +186,7 @@ function handleNavigation(section) {
 }
 
 function showSettings() {
-    const container = document.getElementById('settingsContent');
+    let container = document.getElementById('settingsContent');
     if (!container) {
         container = document.createElement('div');
         container.id = 'settingsContent';
@@ -657,8 +657,6 @@ function nextQuestion() {
 
 // Question Modal functions
 function showQuestionModal(questionData = null) {
-    console.log('showQuestionModal called with:', questionData);
-    
     const isEdit = questionData !== null;
     
     let modal = document.getElementById('questionModal');
@@ -697,6 +695,19 @@ function showQuestionModal(questionData = null) {
                                     <input type="text" placeholder="Nominee name" value="${n.name || ''}" required>
                                     <button type="button" onclick="removeNomineeInput(this)" class="btn-remove">Remove</button>
                                 </div>
+                                <div class="nominee-image-section">
+                                    <label class="image-upload-label">
+                                        <span>Upload Image (Optional)</span>
+                                        <input type="file" name="nominee_${index}_image" accept="image/*" onchange="previewImage(this)">
+                                    </label>
+                                    <div class="image-preview" onclick="showImagePreview(this)">
+                                        ${n.image ? 
+                                            `<img src="${MCA.staticURL}${n.image}" alt="Preview" class="preview-img">
+                                             <button type="button" onclick="removeImage(this)" class="btn-remove-img">×</button>` : 
+                                            '<span class="no-image">No image selected</span>'
+                                        }
+                                    </div>
+                                </div>
                             </div>
                         `).join('') || `
                             <div class="nominee-input" data-index="0">
@@ -704,11 +715,14 @@ function showQuestionModal(questionData = null) {
                                     <input type="text" placeholder="Nominee name" required>
                                     <button type="button" onclick="removeNomineeInput(this)" class="btn-remove">Remove</button>
                                 </div>
-                            </div>
-                            <div class="nominee-input" data-index="1">
-                                <div class="nominee-basic-info">
-                                    <input type="text" placeholder="Nominee name" required>
-                                    <button type="button" onclick="removeNomineeInput(this)" class="btn-remove">Remove</button>
+                                <div class="nominee-image-section">
+                                    <label class="image-upload-label">
+                                        <span>Upload Image (Optional)</span>
+                                        <input type="file" name="nominee_0_image" accept="image/*" onchange="previewImage(this)">
+                                    </label>
+                                    <div class="image-preview">
+                                        <span class="no-image">No image selected</span>
+                                    </div>
                                 </div>
                             </div>
                         `}
@@ -757,8 +771,7 @@ function closeQuestionModal() {
 
 function addNomineeInput() {
     const container = document.getElementById('nomineesContainer');
-    const currentInputs = container.querySelectorAll('.nominee-input');
-    const nextIndex = currentInputs.length;
+    const nextIndex = container.querySelectorAll('.nominee-input').length;
     
     const nomineeDiv = document.createElement('div');
     nomineeDiv.className = 'nominee-input';
@@ -768,6 +781,15 @@ function addNomineeInput() {
         <div class="nominee-basic-info">
             <input type="text" placeholder="Nominee name" required>
             <button type="button" onclick="removeNomineeInput(this)" class="btn-remove">Remove</button>
+        </div>
+        <div class="nominee-image-section">
+            <label class="image-upload-label">
+                <span>Upload Image (Optional)</span>
+                <input type="file" name="nominee_${nextIndex}_image" accept="image/*" onchange="previewImage(this)">
+            </label>
+            <div class="image-preview">
+                <span class="no-image">No image selected</span>
+            </div>
         </div>
     `;
     
@@ -792,10 +814,7 @@ function removeNomineeInput(button) {
 
 async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
     e.preventDefault();
-    console.log('🚀 QUESTION SUBMIT STARTED');
-    console.log('- Is Edit:', isEdit);
-    console.log('- Question ID:', questionId);
-
+    
     const submitButton = e.target.querySelector('button[type="submit"]');
     const originalText = submitButton.innerHTML;
     submitButton.innerHTML = '⚡ Creating...';
@@ -805,24 +824,17 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
         const title = document.getElementById('questionTitle').value.trim();
         const description = document.getElementById('questionDescription').value.trim();
 
-        console.log('📝 FORM DATA EXTRACTED:');
-        console.log('- Title:', title);
-        console.log('- Description:', description);
-
         if (!title || !description) {
             throw new Error('Please fill in all required fields');
         }
 
         const nomineeInputs = document.querySelectorAll('#nomineesContainer .nominee-input');
         const nominees = [];
-        
-        console.log('👥 PROCESSING NOMINEES:');
-        console.log('- Found nominee inputs:', nomineeInputs.length);
+        const imageFiles = [];
         
         for (let i = 0; i < nomineeInputs.length; i++) {
             const input = nomineeInputs[i];
             const nameInput = input.querySelector('input[type="text"]');
-            console.log(`- Nominee ${i + 1} input:`, nameInput?.value);
             
             if (nameInput && nameInput.value.trim()) {
                 const nomineeData = {
@@ -830,7 +842,20 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
                     index: i
                 };
                 nominees.push(nomineeData);
-                console.log(`✅ Added nominee ${i + 1}:`, nomineeData);
+
+                // Collect image files
+                const fileInput = input.querySelector('input[type="file"]');
+                if (fileInput && fileInput.files[0]) {
+                    const file = fileInput.files[0];
+                    if (file.size > 10 * 1024 * 1024) {
+                        throw new Error(`Image ${file.name} is too large. Maximum size is 10MB.`);
+                    }
+                    imageFiles.push({
+                        file: file,
+                        nomineeIndex: i,
+                        nomineeName: nameInput.value.trim()
+                    });
+                }
             }
         }
 
@@ -867,13 +892,11 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
 
         if (!response.ok) {
             let errorMessage;
-            let responseText;
             try {
-                responseText = await response.text();
-                const errorData = JSON.parse(responseText);
+                const errorData = await response.json();
                 errorMessage = errorData.error || errorData.message || `Server error: ${response.status}`;
             } catch (parseError) {
-                errorMessage = responseText || `HTTP ${response.status}: ${response.statusText}`;
+                errorMessage = await response.text() || `HTTP ${response.status}: ${response.statusText}`;
             }
             throw new Error(errorMessage);
         }
@@ -882,18 +905,67 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
 
         if (data.success) {
             submitButton.innerHTML = '🎉 Success!';
-            showToast(isEdit ? 'Question updated!' : 'Question created!', 'success');
+            
+            const hasImages = imageFiles.length > 0;
+            const message = hasImages ? 
+                `${isEdit ? 'Question updated!' : 'Question created!'} ${imageFiles.length} image(s) will upload in background.` :
+                `${isEdit ? 'Question updated!' : 'Question created!'} successfully!`;
+            
+            showToast(message, 'success');
             closeQuestionModal();
             loadAdminQuestions();
+
+            // Upload images in background if any
+            if (hasImages && data.data && data.data.nominees) {
+                uploadImagesInBackground(data.data, imageFiles);
+            }
         } else {
             throw new Error(data.error || 'Operation failed');
         }
 
     } catch (error) {
-        console.error('❌ QUESTION SUBMIT ERROR:', error);
         showToast(error.message, 'error');
         submitButton.innerHTML = originalText;
         submitButton.disabled = false;
+    }
+}
+
+async function uploadImagesInBackground(questionData, imageFiles) {
+    try {
+        for (const imageData of imageFiles) {
+            const { file, nomineeIndex, nomineeName } = imageData;
+            
+            const nominee = questionData.nominees.find(n => 
+                n.name.toLowerCase().trim() === nomineeName.toLowerCase().trim()
+            );
+            
+            if (!nominee) {
+                console.error(`Nominee not found for image: ${nomineeName}`);
+                continue;
+            }
+            
+            const formData = new FormData();
+            formData.append('nomineeId', nominee._id);
+            formData.append('questionId', questionData._id);
+            formData.append('image', file);
+            
+            fetch(`${MCA.baseURL}/admin/nominees/${nominee._id}/image`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: formData
+            }).then(response => {
+                if (response.ok) {
+                    loadAdminQuestions();
+                }
+            }).catch(error => {
+                console.error(`Image upload error for ${nomineeName}:`, error);
+            });
+        }
+    } catch (error) {
+        console.error('Background image upload error:', error);
+        showToast('Some images may not upload properly', 'warning');
     }
 }
 
@@ -1367,32 +1439,23 @@ function showToast(message, type = 'info') {
 
 // Image preview function
 function previewImage(input) {
-    console.log('previewImage called');
     const preview = input.parentElement.nextElementSibling;
-    
     if (input.files && input.files[0]) {
         const reader = new FileReader();
-        
         reader.onload = function(e) {
             preview.innerHTML = `
                 <img src="${e.target.result}" alt="Preview" class="preview-img">
-                <button type="button" onclick="removeImage(this); event.stopPropagation();" class="btn-remove-img">×</button>
+                <button type="button" onclick="removeImage(this)" class="btn-remove-img">×</button>
             `;
         };
-        
         reader.readAsDataURL(input.files[0]);
-    } else {
-        preview.innerHTML = '<span class="no-image">No image selected</span>';
     }
 }
 
-// Remove image function
 function removeImage(button) {
-    console.log('removeImage called');
     const preview = button.parentElement;
     const uploadLabel = preview.previousElementSibling;
     const fileInput = uploadLabel.querySelector('input[type="file"]');
-    
     fileInput.value = '';
     preview.innerHTML = '<span class="no-image">No image selected</span>';
 }
