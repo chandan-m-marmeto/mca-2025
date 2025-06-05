@@ -154,8 +154,8 @@ function displayCurrentUserQuestion() {
                         fullData: nominee
                     });
 
-                    // Construct API URL for image using nominee ID
-                    const imageUrl = `${MCA.baseURL}/nominees/${nomineeId}/image`;
+                    // Use the S3 URL directly if available
+                    const imageUrl = nominee.image || '';
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
@@ -502,18 +502,25 @@ function loadUserProfile() {
     };
 })();
 
-// Load nominee image with proper headers
+// Load nominee image (handles both S3 and API URLs)
 async function loadNomineeImage(img) {
     if (!img.dataset.imageUrl) return;
     
     try {
+        // If it's an S3 URL, load directly
+        if (img.dataset.imageUrl.includes('amazonaws.com')) {
+            img.src = img.dataset.imageUrl;
+            img.classList.remove('loading');
+            return;
+        }
+        
+        // Otherwise, fetch with authorization
         const response = await fetch(img.dataset.imageUrl, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${MCA.token}`,
                 'Accept': 'image/jpeg,image/png,image/webp,image/*'
-            },
-            credentials: 'include'
+            }
         });
         
         if (!response.ok) {
@@ -526,7 +533,7 @@ async function loadNomineeImage(img) {
         
         img.onload = () => {
             img.classList.remove('loading');
-            URL.revokeObjectURL(img.src); // Clean up the old object URL
+            URL.revokeObjectURL(img.src);
         };
         
         img.src = objectUrl;

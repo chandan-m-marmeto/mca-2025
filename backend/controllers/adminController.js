@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
 import { fileURLToPath } from 'url';
+import { uploadToS3, deleteFromS3 } from '../config/s3.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -483,7 +484,8 @@ export const getResults = async (req, res) => {
                 id: nominee._id,
                 name: nominee.name,
                 votes: nominee.votes,
-                image: nominee.image
+                image: nominee.image,
+                imageProcessed: nominee.imageProcessed
             }))
         }));
 
@@ -574,54 +576,46 @@ const getQuestionStatus = (question) => {
     return 'active';
 };
 
-// New endpoint for uploading individual nominee images
+// Upload nominee image to S3
 export const uploadNomineeImage = async (req, res) => {
     try {
         const { nomineeId } = req.params;
-        const { questionId } = req.body;
-
+        
         if (!req.file) {
-            return res.status(400).json({
-                success: false,
-                error: 'No image file provided'
-            });
+            return res.status(400).json({ success: false, error: 'No image file provided' });
         }
 
-        // Verify nominee exists
+        // Generate unique S3 key
+        const timestamp = Date.now();
+        const s3Key = `nominees/nominee-${nomineeId}-${timestamp}.${req.file.originalname.split('.').pop()}`;
+
+        // Upload to S3
+        const imageUrl = await uploadToS3(req.file, s3Key);
+
+        // Update nominee with new image URL
         const nominee = await Nominee.findById(nomineeId);
         if (!nominee) {
-            return res.status(404).json({
-                success: false,
-                error: 'Nominee not found'
-            });
+            return res.status(404).json({ success: false, error: 'Nominee not found' });
         }
 
-        // Start background processing immediately
-        processImageInBackground(
-            nomineeId,
-            questionId,
-            req.file.path,
-            req.file.originalname
-        );
+        // Delete old image if exists
+        if (nominee.image) {
+            const oldKey = nominee.image.split('/').pop();
+            await deleteFromS3(`nominees/${oldKey}`);
+        }
 
-        console.log(`🖼️ Image upload queued for nominee: ${nominee.name}`);
+        // Update nominee with new image URL
+        nominee.image = imageUrl;
+        nominee.imageProcessed = true;
+        await nominee.save();
 
-        res.json({
-            success: true,
-            message: 'Image upload started in background'
+        res.json({ 
+            success: true, 
+            message: 'Image uploaded successfully',
+            imageUrl: imageUrl
         });
-
     } catch (error) {
-        console.error('Upload nominee image error:', error);
-        
-        // Clean up uploaded file on error
-        if (req.file) {
-            deleteFile(req.file.path);
-        }
-
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        console.error('Error uploading nominee image:', error);
+        res.status(500).json({ success: false, error: 'Failed to upload image' });
     }
 };
