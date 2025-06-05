@@ -1,7 +1,6 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { getVotingSessionStatus } from '../controllers/adminController.js';
-import { getQuestions, submitVote } from '../controllers/voteController.js';
 import Question from '../models/Question.js';
 import Nominee from '../models/Nominee.js';
 import User from '../models/User.js';
