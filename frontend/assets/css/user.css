@@ -204,22 +204,23 @@ body:has(#user-dashboard:not(.hidden)) {
     border: 2px solid transparent;
 }
 
+.user-container .nominee-card:hover:not(.voted) {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
 .user-container .nominee-card.selected {
     border-color: #4CAF50;
     background: rgba(76, 175, 80, 0.15);
-    pointer-events: none;
 }
 
 .user-container .nominee-card.voted {
     cursor: default;
+    pointer-events: none;
 }
 
-.user-container .nominee-card:hover {
-    border-color: rgba(16, 103, 173, 0.5);
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 
-        0 20px 40px rgba(16, 103, 173, 0.15),
-        0 0 0 1px rgba(16, 103, 173, 0.1);
+.user-container .nominee-card.voted:not(.selected) {
+    opacity: 0.7;
 }
 
 .user-container .nominee-card > * {
@@ -797,4 +798,38 @@ h1, h2, h3, h4, h5, h6,
 .memory-card h3 {
     font-family: 'Lato', sans-serif !important;
     font-weight: 100 !important;
+}
+
+.vote-button-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+.btn-submit-vote {
+    min-width: 200px;
+    padding: 12px 30px;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    text-align: center;
+    border-radius: 8px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-submit-vote:hover:not(.disabled) {
+    background: #45a049;
+    transform: translateY(-2px);
+}
+
+.btn-submit-vote.disabled {
+    background: #666;
+    cursor: not-allowed;
+    opacity: 0.7;
+    pointer-events: none;
 } 

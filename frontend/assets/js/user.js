@@ -149,7 +149,7 @@ function displayCurrentUserQuestion() {
         title: question.title || 'Untitled Question',
         description: question.description || '',
         nominees: Array.isArray(question.nominees) ? question.nominees : [],
-        userVote: question.userVote || null
+        userVote: question.userVote || userVotes[question.id || question._id] || null
     };
     
     console.log('Processing question:', {
@@ -178,11 +178,18 @@ function displayCurrentUserQuestion() {
                     console.log(`Nominee ${nomineeName}:`, {
                         id: nomineeId,
                         isVoted: isVoted,
-                        isClickable: !safeQuestion.userVote
+                        isClickable: !safeQuestion.userVote,
+                        userVote: safeQuestion.userVote
                     });
                     
+                    const cardClasses = [
+                        'nominee-card',
+                        isVoted ? 'selected' : '',
+                        safeQuestion.userVote ? 'voted' : ''
+                    ].filter(Boolean).join(' ');
+                    
                     return `
-                        <div class="nominee-card ${isVoted ? 'selected' : ''} ${safeQuestion.userVote ? 'voted' : ''}" 
+                        <div class="${cardClasses}" 
                              data-nominee-id="${nomineeId}"
                              onclick="${safeQuestion.userVote ? '' : `selectNominee('${safeQuestion.id}', '${nomineeId}')`}">
                             <div class="nominee-avatar">
