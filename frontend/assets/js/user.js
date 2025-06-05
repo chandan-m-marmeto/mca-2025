@@ -224,6 +224,192 @@ function displayCurrentUserQuestion() {
             </div>
         </div>
     `;
+
+    // Add CSS if not already present
+    if (!document.getElementById('voting-styles')) {
+        const styles = document.createElement('style');
+        styles.id = 'voting-styles';
+        styles.textContent = `
+            .question-container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+                position: relative;
+            }
+
+            .question-header {
+                text-align: center;
+                margin-bottom: 40px;
+                padding-top: 20px;
+            }
+
+            .question-content {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+
+            .question-title {
+                font-size: 42px;
+                font-weight: 500;
+                color: #fff;
+                margin-bottom: 20px;
+                line-height: 1.2;
+            }
+
+            .question-description {
+                font-size: 18px;
+                color: rgba(255, 255, 255, 0.8);
+                line-height: 1.5;
+            }
+
+            .nominees-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 30px;
+                margin: 40px 0;
+            }
+
+            .nominee-card {
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 10px;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                position: relative;
+                border: 2px solid transparent;
+            }
+
+            .nominee-card:hover:not(.selected) {
+                background: rgba(255, 255, 255, 0.1);
+                transform: translateY(-2px);
+            }
+
+            .nominee-card.selected {
+                border-color: #4CAF50;
+                background: rgba(76, 175, 80, 0.15);
+                pointer-events: none;
+            }
+
+            .nominee-avatar {
+                width: 120px;
+                height: 120px;
+                border-radius: 50%;
+                overflow: hidden;
+                margin-bottom: 15px;
+                background: rgba(255, 255, 255, 0.1);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .nominee-initial-avatar {
+                font-size: 48px;
+                color: white;
+                font-weight: 500;
+            }
+
+            .nominee-name {
+                font-size: 24px;
+                color: #fff;
+                text-align: center;
+                margin: 10px 0;
+            }
+
+            .selected-indicator {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: #4CAF50;
+                color: white;
+                padding: 5px 10px;
+                border-radius: 15px;
+                font-size: 14px;
+                font-weight: 500;
+            }
+
+            .vote-button-container {
+                text-align: center;
+                margin: 30px 0;
+                display: flex;
+                justify-content: center;
+            }
+
+            .btn-primary {
+                background: #4CAF50;
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 5px;
+                font-size: 16px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                min-width: 200px;
+            }
+
+            .btn-primary:hover:not(.btn-disabled) {
+                background: #45a049;
+                transform: translateY(-2px);
+            }
+
+            .btn-disabled {
+                background: #666;
+                cursor: not-allowed;
+                opacity: 0.7;
+            }
+
+            .navigation-buttons {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 20px;
+                margin-top: 40px;
+                padding: 20px;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .nav-btn {
+                background: transparent;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                color: white;
+                padding: 8px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                min-width: 100px;
+                font-size: 14px;
+            }
+
+            .nav-btn:hover:not(.disabled) {
+                border-color: white;
+                background: rgba(255, 255, 255, 0.1);
+            }
+
+            .nav-btn.disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                pointer-events: none;
+            }
+
+            .page-info {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 14px;
+                min-width: 80px;
+                justify-content: center;
+            }
+
+            .current-num {
+                color: white;
+                font-weight: 500;
+            }
+        `;
+        document.head.appendChild(styles);
+    }
     
     console.log('Question display updated');
 }
