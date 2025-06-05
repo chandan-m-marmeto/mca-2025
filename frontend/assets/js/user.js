@@ -154,40 +154,20 @@ function displayCurrentUserQuestion() {
                         fullData: nominee
                     });
 
-                    // Create a blob URL for the image after fetching with auth
-                    const imageUrl = nominee.image;
-                    const fullImageUrl = `${MCA.staticURL}${nominee.image}`;
-                    
-                    // Function to load image with authorization
-                    const loadImageWithAuth = async (imgElement, url) => {
-                        try {
-                            const response = await fetch(url, {
-                                headers: {
-                                    'Authorization': `Bearer ${MCA.token}`
-                                }
-                            });
-                            
-                            if (!response.ok) throw new Error('Image load failed');
-                            
-                            const blob = await response.blob();
-                            const blobUrl = URL.createObjectURL(blob);
-                            imgElement.src = blobUrl;
-                        } catch (error) {
-                            console.error('Failed to load image:', error);
-                            handleImageError(imgElement, nomineeName);
-                        }
-                    };
+                    // Create image URL using the API endpoint
+                    const imageUrl = `${MCA.baseURL}/nominees/${nomineeId}/image`;
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
                              data-nominee-id="${nomineeId}"
                              onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
                             <div class="nominee-avatar">
-                                <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect width='100%' height='100%' fill='%23f0f0f0'/></svg>"
+                                <img src="${imageUrl}" 
                                      alt="${nominee.name}" 
                                      class="nominee-avatar-img"
-                                     onload="loadImageWithAuth(this, '${fullImageUrl}')"
-                                     onerror="handleImageError(this, '${nomineeName}')">
+                                     crossorigin="anonymous"
+                                     onerror="handleImageError(this, '${nomineeName}')"
+                                     referrerpolicy="no-referrer">
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
@@ -507,15 +487,36 @@ function loadUserProfile() {
     console.log('Loading user profile...');
 }
 
+// Add interceptor for image requests
+(() => {
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        // If this is an image request from our API
+        if (url.includes('/nominees/') && url.includes('/image')) {
+            options.headers = {
+                ...options.headers,
+                'Authorization': `Bearer ${MCA.token}`
+            };
+        }
+        return originalFetch(url, options);
+    };
+})();
+
 // Handle image loading errors
 function handleImageError(img, nomineeName) {
-    console.error('Failed to load image for nominee:', nomineeName, 'URL:', img.src);
+    console.error('Failed to load image for nominee:', nomineeName);
     
-    // Set a default placeholder
-    img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="100%" height="100%" fill="%23f0f0f0"/><text x="50%" y="50%" fill="%23999" text-anchor="middle" dominant-baseline="middle" font-family="system-ui">' + nomineeName.charAt(0) + '</text></svg>';
-    img.onerror = null; // Prevent infinite error loop
+    // Create SVG with nominee initial
+    const initial = nomineeName.charAt(0);
+    const svg = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+        <rect width="200" height="200" fill="%23f0f0f0"/>
+        <text x="100" y="100" fill="%23999" font-size="80" 
+              text-anchor="middle" dominant-baseline="middle" 
+              font-family="system-ui">${initial}</text>
+    </svg>`;
     
-    // Add a class to style the failed image container
+    img.src = svg;
+    img.onerror = null;
     img.parentElement.classList.add('image-load-failed');
 }
 
