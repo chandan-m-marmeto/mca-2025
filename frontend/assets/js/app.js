@@ -415,6 +415,7 @@ async function toggleVoting() {
         const endpoint = isCurrentlyActive ? 'end' : 'start';
         const body = isCurrentlyActive ? {} : { duration: parseInt(durationInput.value) };
 
+        // First, start/end the voting session
         const response = await fetch(`${MCA.baseURL}/admin/voting-session/${endpoint}`, {
             method: 'POST',
             headers: {
@@ -427,8 +428,34 @@ async function toggleVoting() {
         const data = await response.json();
 
         if (response.ok) {
+            // If activating voting, also activate all questions
+            if (!isCurrentlyActive) {
+                try {
+                    // Activate all questions
+                    const questionsResponse = await fetch(`${MCA.baseURL}/admin/questions/activate-all`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${MCA.token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!questionsResponse.ok) {
+                        showToast('Voting activated but some questions may not be visible. Please check question settings.', 'warning');
+                    }
+                } catch (error) {
+                    console.error('Error activating questions:', error);
+                    showToast('Voting activated but questions activation failed. Please check settings.', 'warning');
+                }
+            }
+
             updateVotingStatus(!isCurrentlyActive, durationInput.value);
             showToast(`Voting ${isCurrentlyActive ? 'deactivated' : 'activated'} successfully!`, 'success');
+            
+            // Refresh questions list if we're in the questions section
+            if (document.getElementById('questionsContent') && !document.getElementById('questionsContent').classList.contains('hidden')) {
+                loadAdminQuestions();
+            }
         } else {
             // If server says another session is active, update UI to reflect that
             if (data.error && data.error.includes('already active')) {
@@ -439,6 +466,7 @@ async function toggleVoting() {
             }
         }
     } catch (error) {
+        console.error('Toggle voting error:', error);
         showToast(error.message, 'error');
         // On error, refresh status from server to ensure UI is correct
         checkVotingStatus();

@@ -9,7 +9,8 @@ import {
     uploadNomineeImage,
     startVotingSession,
     endVotingSession,
-    getVotingSessionStatus
+    getVotingSessionStatus,
+    activateAllQuestions
 } from '../controllers/adminController.js';
 import { authenticateToken, isAdmin } from '../middleware/auth.js';
 
@@ -28,6 +29,7 @@ router.delete('/questions/:id', deleteQuestion);
 router.post('/voting-session/start', startVotingSession);
 router.post('/voting-session/end', endVotingSession);
 router.get('/voting-session/status', getVotingSessionStatus);
+router.post('/questions/activate-all', activateAllQuestions);
 
 // Other Admin Routes
 router.get('/results', getResults);

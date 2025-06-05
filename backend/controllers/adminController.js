@@ -656,3 +656,22 @@ export const uploadNomineeImage = async (req, res) => {
         res.status(500).json({ success: false, error: 'Failed to upload image' });
     }
 };
+
+// Activate all questions
+export const activateAllQuestions = async (req, res) => {
+    try {
+        // Update all questions to be active
+        await Question.updateMany({}, { isActive: true });
+
+        res.json({
+            success: true,
+            message: 'All questions activated successfully'
+        });
+    } catch (error) {
+        console.error('Activate all questions error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to activate questions'
+        });
+    }
+};
