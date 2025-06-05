@@ -204,21 +204,26 @@ function showSettings() {
                 
                 <div class="voting-status-display" id="votingStatus">
                     <div class="status-indicator">
-                        <span class="status-dot"></span>
-                        <span class="status-text">Checking status...</span>
+                        <div class="status-badge">
+                            <span class="status-dot"></span>
+                            <span class="status-text">Checking status...</span>
+                        </div>
+                        <div class="time-remaining" id="timeRemaining"></div>
                     </div>
                 </div>
 
                 <div class="settings-actions">
-                    <div class="duration-input" id="durationInput">
-                        <label for="votingDuration">Duration (hours)</label>
-                        <input type="number" 
-                               id="votingDuration" 
-                               min="1" 
-                               max="72" 
-                               value="24" 
-                               placeholder="Enter duration in hours">
-                        <span class="duration-hint">Maximum 72 hours</span>
+                    <div class="duration-wrapper" id="durationWrapper">
+                        <div class="duration-input" id="durationInput">
+                            <label for="votingDuration">Duration (hours)</label>
+                            <input type="number" 
+                                   id="votingDuration" 
+                                   min="1" 
+                                   max="72" 
+                                   value="24" 
+                                   placeholder="Enter duration in hours">
+                            <span class="duration-hint">Maximum 72 hours</span>
+                        </div>
                     </div>
                     <button id="toggleVotingBtn" class="btn btn-large">
                         <span class="btn-icon">🔓</span>
@@ -244,11 +249,73 @@ function showSettings() {
         </div>
     `;
 
-    // Add styles for duration input
+    // Add styles for improved status display
     const styles = document.createElement('style');
     styles.textContent = `
-        .duration-input {
+        .voting-status-display {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            border-radius: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4444;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.active {
+            background: #00C853;
+            box-shadow: 0 0 10px rgba(0, 200, 83, 0.5);
+        }
+
+        .status-text {
+            font-size: 16px;
+            color: #fff;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .time-remaining {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .duration-wrapper {
             margin-right: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .duration-wrapper.hidden {
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+        }
+
+        .duration-input {
             background: rgba(255, 255, 255, 0.05);
             padding: 15px;
             border-radius: 10px;
@@ -296,16 +363,25 @@ function showSettings() {
             justify-content: center;
             margin: 30px 0;
         }
+
+        .btn-large {
+            min-width: 200px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-large.active {
+            background: #ff4444;
+            box-shadow: 0 4px 12px rgba(255, 68, 68, 0.3);
+        }
     `;
     document.head.appendChild(styles);
 
     container.classList.remove('hidden');
     
-    // Add event listener for the toggle button
+    // Add event listeners
     const toggleBtn = document.getElementById('toggleVotingBtn');
     toggleBtn.addEventListener('click', toggleVoting);
     
-    // Add event listener for duration input validation
     const durationInput = document.getElementById('votingDuration');
     durationInput.addEventListener('input', function() {
         const value = parseInt(this.value);
@@ -321,12 +397,20 @@ async function toggleVoting() {
     const toggleBtn = document.getElementById('toggleVotingBtn');
     const isCurrentlyActive = toggleBtn.classList.contains('active');
     const durationInput = document.getElementById('votingDuration');
+    const durationWrapper = document.getElementById('durationWrapper');
     
     try {
         if (!isCurrentlyActive && (!durationInput.value || durationInput.value < 1)) {
             showToast('Please enter a valid duration between 1-72 hours', 'error');
             return;
         }
+
+        // Update UI immediately to show action is in progress
+        toggleBtn.disabled = true;
+        toggleBtn.innerHTML = `
+            <span class="btn-icon">⚡</span>
+            <span class="btn-text">${isCurrentlyActive ? 'Deactivating...' : 'Activating...'}</span>
+        `;
 
         const endpoint = isCurrentlyActive ? 'end' : 'start';
         const body = isCurrentlyActive ? {} : { duration: parseInt(durationInput.value) };
@@ -341,15 +425,89 @@ async function toggleVoting() {
         });
 
         if (response.ok) {
+            // Update UI immediately after successful response
+            updateVotingStatus(!isCurrentlyActive, durationInput.value);
             showToast(`Voting ${isCurrentlyActive ? 'deactivated' : 'activated'} successfully!`, 'success');
-            checkVotingStatus();
         } else {
             const data = await response.json();
             throw new Error(data.error || `Failed to ${isCurrentlyActive ? 'deactivate' : 'activate'} voting`);
         }
     } catch (error) {
         showToast(error.message, 'error');
+        // Reset button state on error
+        toggleBtn.disabled = false;
+        toggleBtn.innerHTML = `
+            <span class="btn-icon">${isCurrentlyActive ? '🔒' : '🔓'}</span>
+            <span class="btn-text">${isCurrentlyActive ? 'Deactivate Voting' : 'Activate Voting'}</span>
+        `;
     }
+}
+
+function updateVotingStatus(isActive, duration = null) {
+    const statusDot = document.querySelector('.status-dot');
+    const statusText = document.querySelector('.status-text');
+    const toggleBtn = document.getElementById('toggleVotingBtn');
+    const durationInput = document.getElementById('votingDuration');
+    const durationWrapper = document.getElementById('durationWrapper');
+    const timeRemaining = document.getElementById('timeRemaining');
+
+    if (statusDot && statusText && toggleBtn && durationInput && durationWrapper) {
+        if (isActive) {
+            statusDot.classList.add('active');
+            statusText.textContent = 'Voting is ACTIVE';
+            toggleBtn.classList.add('active');
+            toggleBtn.disabled = false;
+            toggleBtn.innerHTML = `
+                <span class="btn-icon">🔒</span>
+                <span class="btn-text">Deactivate Voting</span>
+            `;
+            durationWrapper.classList.add('hidden');
+            durationInput.disabled = true;
+
+            if (duration) {
+                const endTime = new Date(Date.now() + duration * 60 * 60 * 1000);
+                updateTimeRemaining(endTime);
+            }
+        } else {
+            statusDot.classList.remove('active');
+            statusText.textContent = 'Voting is INACTIVE';
+            toggleBtn.classList.remove('active');
+            toggleBtn.disabled = false;
+            toggleBtn.innerHTML = `
+                <span class="btn-icon">🔓</span>
+                <span class="btn-text">Activate Voting</span>
+            `;
+            durationWrapper.classList.remove('hidden');
+            durationInput.disabled = false;
+            timeRemaining.textContent = '';
+        }
+    }
+}
+
+function updateTimeRemaining(endTime) {
+    const timeRemainingElement = document.getElementById('timeRemaining');
+    
+    function updateDisplay() {
+        const now = new Date();
+        const timeLeft = endTime - now;
+        
+        if (timeLeft <= 0) {
+            timeRemainingElement.textContent = 'Voting period has ended';
+            checkVotingStatus(); // Refresh the status
+            return;
+        }
+        
+        const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        
+        timeRemainingElement.textContent = `Time remaining: ${hours}h ${minutes}m`;
+    }
+    
+    updateDisplay();
+    const intervalId = setInterval(updateDisplay, 60000); // Update every minute
+    
+    // Store the interval ID to clear it later if needed
+    timeRemainingElement.dataset.intervalId = intervalId;
 }
 
 async function checkVotingStatus() {
@@ -362,32 +520,7 @@ async function checkVotingStatus() {
 
         if (response.ok) {
             const data = await response.json();
-            const statusDot = document.querySelector('.status-dot');
-            const statusText = document.querySelector('.status-text');
-            const toggleBtn = document.getElementById('toggleVotingBtn');
-            const durationInput = document.getElementById('votingDuration');
-            
-            if (statusDot && statusText && toggleBtn && durationInput) {
-                if (data.isActive) {
-                    statusDot.classList.add('active');
-                    statusText.textContent = 'Voting is ACTIVE';
-                    toggleBtn.classList.add('active');
-                    toggleBtn.innerHTML = `
-                        <span class="btn-icon">🔒</span>
-                        <span class="btn-text">Deactivate Voting</span>
-                    `;
-                    durationInput.disabled = true;
-                } else {
-                    statusDot.classList.remove('active');
-                    statusText.textContent = 'Voting is INACTIVE';
-                    toggleBtn.classList.remove('active');
-                    toggleBtn.innerHTML = `
-                        <span class="btn-icon">🔓</span>
-                        <span class="btn-text">Activate Voting</span>
-                    `;
-                    durationInput.disabled = false;
-                }
-            }
+            updateVotingStatus(data.isActive, data.duration);
         } else {
             throw new Error('Failed to check voting status');
         }
