@@ -123,13 +123,6 @@ function displayCurrentUserQuestion() {
     
     const hasVoted = userVotes[safeQuestion.id];
     
-    // Debug nominee data
-    console.log('Current Question:', question);
-    console.log('Safe Question:', safeQuestion);
-    safeQuestion.nominees.forEach((nominee, index) => {
-        console.log(`Nominee ${index}:`, nominee);
-    });
-    
     questionsContainer.innerHTML = `
         <div class="question-container">
             <!-- Question Header -->
@@ -146,28 +139,12 @@ function displayCurrentUserQuestion() {
                     const nomineeId = nominee.id || nominee._id;
                     const nomineeName = nominee.name || 'Unknown';
                     
-                    // Debug each nominee as we process it
-                    console.log('Processing nominee:', {
-                        id: nomineeId,
-                        name: nomineeName,
-                        image: nominee.image,
-                        fullData: nominee
-                    });
-
-                    // Use the S3 URL directly if available
-                    const imageUrl = nominee.image || '';
-                    
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
                              data-nominee-id="${nomineeId}"
                              onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
                             <div class="nominee-avatar">
-                                <img src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200' fill='%23f0f0f0'/></svg>"
-                                     alt="${nominee.name}" 
-                                     class="nominee-avatar-img loading"
-                                     data-image-url="${imageUrl}"
-                                     onload="loadNomineeImage(this)"
-                                     onerror="handleImageError(this, '${nomineeName}')">
+                                <div class="nominee-initial-avatar">${(nominee.name || 'U').charAt(0).toUpperCase()}</div>
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
@@ -195,10 +172,17 @@ function displayCurrentUserQuestion() {
                         ${currentQuestionIndex === 0 ? 'disabled' : ''}>
                     ← Previous
                 </button>
-                <button class="nav-btn ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}" 
+                
+                <div class="page-info">
+                    <span class="current-num">${currentQuestionIndex + 1}</span>
+                    <span class="separator">of</span>
+                    <span class="total-num">${currentQuestions.length}</span>
+                </div>
+                
+                <button class="page-btn" 
                         onclick="nextUserQuestion()" 
                         ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}>
-                    Next →
+                    Next <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
         </div>
@@ -486,88 +470,3 @@ function loadUserProfile() {
     // Implementation for user profile loading
     console.log('Loading user profile...');
 }
-
-// Add interceptor for image requests
-(() => {
-    const originalFetch = window.fetch;
-    window.fetch = function(url, options = {}) {
-        // If this is an image request from our uploads directory
-        if (url.includes('/uploads/nominees/')) {
-            options.headers = {
-                ...options.headers,
-                'Authorization': `Bearer ${MCA.token}`
-            };
-        }
-        return originalFetch(url, options);
-    };
-})();
-
-// Load nominee image (handles both S3 and API URLs)
-async function loadNomineeImage(img) {
-    if (!img.dataset.imageUrl) return;
-    
-    try {
-        // If it's an S3 URL, load directly
-        if (img.dataset.imageUrl.includes('amazonaws.com')) {
-            img.src = img.dataset.imageUrl;
-            img.classList.remove('loading');
-            return;
-        }
-        
-        // Otherwise, fetch with authorization
-        const response = await fetch(img.dataset.imageUrl, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${MCA.token}`,
-                'Accept': 'image/jpeg,image/png,image/webp,image/*'
-            }
-        });
-        
-        if (!response.ok) {
-            console.error('Image load failed:', response.status, response.statusText);
-            throw new Error('Failed to load image');
-        }
-        
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        
-        img.onload = () => {
-            img.classList.remove('loading');
-            URL.revokeObjectURL(img.src);
-        };
-        
-        img.src = objectUrl;
-    } catch (error) {
-        console.error('Failed to load image:', error);
-        handleImageError(img, img.alt);
-    }
-}
-
-// Handle image loading errors with better SVG
-function handleImageError(img, nomineeName) {
-    console.error('Failed to load image for nominee:', nomineeName);
-    
-    // Create a more visually appealing SVG placeholder
-    const initial = nomineeName.charAt(0).toUpperCase();
-    const colors = {
-        bg: '#f0f0f0',
-        circle: '#e0e0e0',
-        text: '#666'
-    };
-    
-    const svg = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-        <rect width="200" height="200" fill="${colors.bg}"/>
-        <circle cx="100" cy="100" r="70" fill="${colors.circle}"/>
-        <text x="100" y="120" fill="${colors.text}" font-size="80" 
-              text-anchor="middle" font-family="system-ui, -apple-system, sans-serif"
-              font-weight="500">${initial}</text>
-    </svg>`.replace(/#/g, '%23');
-    
-    img.src = svg;
-    img.onerror = null;
-    img.classList.remove('loading');
-    img.parentElement.classList.add('image-load-failed');
-}
-
-// Make loadNomineeImage available globally
-window.loadNomineeImage = loadNomineeImage;

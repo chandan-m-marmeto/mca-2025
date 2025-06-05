@@ -146,14 +146,7 @@ function displayCurrentAdminQuestion() {
                                 <div class="full-nominee-card">
                                     <div class="nominee-header">
                                         <div class="nominee-avatar">
-                                            ${nominee.image ? 
-                                                `<img src="${nominee.image}" 
-                                                      alt="${nominee.name || 'Unknown'}" 
-                                                      class="nominee-avatar-img"
-                                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                                 <div class="nominee-initial-avatar" style="display:none;">${(nominee.name || 'U').charAt(0).toUpperCase()}</div>` :
-                                                `<div class="nominee-initial-avatar">${(nominee.name || 'U').charAt(0).toUpperCase()}</div>`
-                                            }
+                                            <div class="nominee-initial-avatar">${(nominee.name || 'U').charAt(0).toUpperCase()}</div>
                                         </div>
                                         <div class="nominee-title">
                                             <h4>${nominee.name}</h4>
@@ -451,22 +444,12 @@ async function viewResults(questionId) {
                             ${question.nominees.map(nominee => {
                                 const percentage = totalVotes > 0 ? ((nominee.votes / totalVotes) * 100).toFixed(1) : 0;
                                 
-                                // Add image display
-                                const imageHtml = nominee.image ? 
-                                    `<img src="${nominee.image}" 
-                                          alt="${nominee.name}" 
-                                          class="nominee-avatar-img"
-                                          style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;"
-                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                     <div class="nominee-initial-avatar" style="display:none; width: 40px; height: 40px;">${nominee.name.charAt(0).toUpperCase()}</div>` :
-                                    `<div class="nominee-initial-avatar" style="width: 40px; height: 40px;">${nominee.name.charAt(0).toUpperCase()}</div>`;
-                                
                                 return `
                                     <div style="margin-bottom: 2rem;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                             <div style="display: flex; align-items: center;">
-                                                ${imageHtml}
-                                                <span>${nominee.name}${nominee.department ? ` (${nominee.department})` : ''}</span>
+                                                <div class="nominee-initial-avatar" style="width: 40px; height: 40px;">${nominee.name.charAt(0).toUpperCase()}</div>
+                                                <span style="margin-left: 10px;">${nominee.name}</span>
                                             </div>
                                             <span>${nominee.votes} votes (${percentage}%)</span>
                                         </div>
