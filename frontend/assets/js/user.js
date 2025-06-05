@@ -179,10 +179,10 @@ function displayCurrentUserQuestion() {
                     <span class="total-num">${currentQuestions.length}</span>
                 </div>
                 
-                <button class="page-btn" 
+                <button class="nav-btn ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}" 
                         onclick="nextUserQuestion()" 
                         ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}>
-                    Next <i class="fas fa-chevron-right"></i>
+                    Next →
                 </button>
             </div>
         </div>

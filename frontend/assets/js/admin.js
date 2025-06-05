@@ -19,7 +19,27 @@ function showAnalytics() {
 }
 
 function showSettings() {
-    showToast('Settings section coming soon!', 'info');
+    const container = document.getElementById('settings-section') || document.createElement('div');
+    container.id = 'settings-section';
+    container.className = 'content-section';
+    
+    container.innerHTML = `
+        <div class="settings-container">
+            <div class="settings-card">
+                <h2>Voting Control</h2>
+                <div class="settings-actions">
+                    <button id="makeLiveBtn" class="btn btn-primary" onclick="makeAllQuestionsLive()">
+                        <i class="fas fa-broadcast-tower"></i> Make All Questions Live
+                    </button>
+                    <button id="stopVotingBtn" class="btn btn-danger" onclick="stopAllVoting()">
+                        <i class="fas fa-stop-circle"></i> Stop All Voting
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.querySelector('.content-body').appendChild(container);
 }
 
 function showContentSection(sectionId) {
@@ -770,3 +790,53 @@ loadQuestions = async function() {
     }
     checkVotingSessionStatus();
 };
+
+async function makeAllQuestionsLive() {
+    try {
+        showLoading();
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${MCA.token}`
+            },
+            body: JSON.stringify({ duration: 24 }) // Default 24 hours
+        });
+
+        if (response.ok) {
+            showToast('All questions are now live!', 'success');
+            loadQuestions(); // Refresh the questions list
+        } else {
+            throw new Error('Failed to make questions live');
+        }
+    } catch (error) {
+        console.error('Error making questions live:', error);
+        showToast('Error making questions live', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function stopAllVoting() {
+    if (!confirm('Are you sure you want to stop all voting?')) return;
+    
+    try {
+        showLoading();
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/end`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${MCA.token}` }
+        });
+
+        if (response.ok) {
+            showToast('Voting has been stopped', 'success');
+            loadQuestions(); // Refresh the questions list
+        } else {
+            throw new Error('Failed to stop voting');
+        }
+    } catch (error) {
+        console.error('Error stopping voting:', error);
+        showToast('Error stopping voting', 'error');
+    } finally {
+        hideLoading();
+    }
+}
