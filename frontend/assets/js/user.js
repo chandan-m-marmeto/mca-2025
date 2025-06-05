@@ -154,8 +154,16 @@ function displayCurrentUserQuestion() {
                         fullData: nominee
                     });
                     
-                    // Use the image path from the API response
-                    const imageUrl = `${MCA.staticURL}${nominee.image}`;
+                    // Try different URL formats
+                    const imageUrl = nominee.image;
+                    const fullImageUrl = `${MCA.staticURL}${nominee.image}`;
+                    const alternateUrl = `${MCA.baseURL}/uploads/nominees/${nomineeId}.jpeg`;
+                    
+                    console.log('Attempting image URLs:', {
+                        relative: imageUrl,
+                        full: fullImageUrl,
+                        alternate: alternateUrl
+                    });
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
@@ -165,7 +173,9 @@ function displayCurrentUserQuestion() {
                                 <img src="${imageUrl}" 
                                      alt="${nominee.name}" 
                                      class="nominee-avatar-img"
-                                     onerror="handleImageError(this, '${nomineeName}')">
+                                     data-full-url="${fullImageUrl}"
+                                     data-alt-url="${alternateUrl}"
+                                     onerror="tryAlternateImageUrls(this, '${nomineeName}')">
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
@@ -494,5 +504,32 @@ function handleImageError(img, nomineeName) {
     img.onerror = null; // Prevent infinite error loop if default image also fails
     
     // Add a class to style the failed image container
+    img.parentElement.classList.add('image-load-failed');
+}
+
+function tryAlternateImageUrls(img, nomineeName) {
+    console.log('Image load failed for:', nomineeName);
+    console.log('Current URL:', img.src);
+    console.log('Full URL:', img.dataset.fullUrl);
+    console.log('Alternate URL:', img.dataset.altUrl);
+
+    // If we're using the relative URL, try the full URL
+    if (!img.src.startsWith('http')) {
+        console.log('Trying full URL...');
+        img.src = img.dataset.fullUrl;
+        return;
+    }
+
+    // If full URL failed, try alternate URL
+    if (img.src === img.dataset.fullUrl) {
+        console.log('Trying alternate URL...');
+        img.src = img.dataset.altUrl;
+        return;
+    }
+
+    // If all URLs failed, use default avatar
+    console.error('All image URLs failed for nominee:', nomineeName);
+    img.src = '/assets/images/default-avatar.jpg';
+    img.onerror = null; // Prevent infinite error loop
     img.parentElement.classList.add('image-load-failed');
 }
