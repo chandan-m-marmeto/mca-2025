@@ -154,12 +154,8 @@ function displayCurrentUserQuestion() {
                         fullData: nominee
                     });
 
-                    // Get the image ID from the path
-                    const imageMatch = nominee.image.match(/nominee-(\d+)-(\d+)\.jpeg$/);
-                    const imageId = imageMatch ? `${imageMatch[1]}-${imageMatch[2]}` : nomineeId;
-                    
-                    // Construct API URL for image
-                    const imageUrl = `${MCA.baseURL}/images/nominee/${imageId}`;
+                    // Construct API URL for image using nominee ID
+                    const imageUrl = `${MCA.baseURL}/nominees/${nomineeId}/image`;
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
@@ -512,13 +508,18 @@ async function loadNomineeImage(img) {
     
     try {
         const response = await fetch(img.dataset.imageUrl, {
+            method: 'GET',
             headers: {
                 'Authorization': `Bearer ${MCA.token}`,
                 'Accept': 'image/jpeg,image/png,image/webp,image/*'
-            }
+            },
+            credentials: 'include'
         });
         
-        if (!response.ok) throw new Error('Failed to load image');
+        if (!response.ok) {
+            console.error('Image load failed:', response.status, response.statusText);
+            throw new Error('Failed to load image');
+        }
         
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
