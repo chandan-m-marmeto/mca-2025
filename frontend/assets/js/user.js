@@ -39,7 +39,15 @@ async function loadUserQuestions() {
             currentQuestionIndex = 0;
             
             console.log(`Loaded ${currentQuestions.length} questions`);
-            console.log('First question details:', currentQuestions[0]);
+            
+            // Pre-populate userVotes object with existing votes
+            userVotes = {};
+            currentQuestions.forEach(question => {
+                if (question.userVote) {
+                    console.log(`Found existing vote for question ${question.id || question._id}:`, question.userVote);
+                    userVotes[question.id || question._id] = question.userVote;
+                }
+            });
             
             if (currentQuestions.length > 0) {
                 displayCurrentUserQuestion();
@@ -251,11 +259,11 @@ function selectNominee(questionId, nomineeId) {
     // Store the vote
     userVotes[questionId] = nomineeId;
     
-    // Enable submit button
+    // Enable submit button if not already voted
     const submitBtn = document.getElementById('submitVoteBtn');
-    if (submitBtn) {
+    if (submitBtn && !question.userVote) {
         submitBtn.disabled = false;
-        submitBtn.classList.remove('btn-disabled');
+        submitBtn.classList.remove('disabled');
         submitBtn.innerHTML = 'Submit Vote';
         console.log('Submit button enabled');
     }
@@ -286,6 +294,9 @@ async function submitCurrentVote() {
         });
         
         if (response.ok) {
+            // Update the current question's userVote
+            question.userVote = selectedNomineeId;
+            
             // Trigger celebration background effect
             if (window.userBackground) {
                 window.userBackground.celebrateVote();
@@ -297,13 +308,14 @@ async function submitCurrentVote() {
             const submitBtn = document.getElementById('submitVoteBtn');
             if (submitBtn) {
                 submitBtn.innerHTML = 'Vote Submitted';
-                submitBtn.classList.add('btn-disabled');
+                submitBtn.classList.add('disabled');
                 submitBtn.disabled = true;
             }
             
-            // Update the question data
-            const nominee = question.nominees.find(n => (n.id || n._id) === selectedNomineeId);
-            if (nominee) nominee.votes++;
+            // Add voted class to all nominee cards
+            document.querySelectorAll('.nominee-card').forEach(card => {
+                card.classList.add('voted');
+            });
             
         } else {
             const data = await response.json();
