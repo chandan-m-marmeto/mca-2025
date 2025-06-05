@@ -697,8 +697,20 @@ async function handleRegister(e) {
         const data = await response.json();
 
         if (response.ok) {
-            showToast('Registration successful! Please login.', 'success');
-            switchToLogin();
+            // Store user data and token immediately after registration
+            MCA.token = data.token;
+            MCA.currentUser = data.user;
+            MCA.isAdmin = data.user.isAdmin;
+            localStorage.setItem('token', data.token);
+            
+            showToast('Registration successful! Welcome to MCA 2025!', 'success');
+            
+            // Redirect to appropriate dashboard based on user role
+            if (MCA.isAdmin) {
+                showAdminDashboard();
+            } else {
+                showUserDashboard();
+            }
         } else {
             showToast(data.error || 'Registration failed', 'error');
         }
