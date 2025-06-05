@@ -154,8 +154,10 @@ function displayCurrentUserQuestion() {
                         fullData: nominee
                     });
 
-                    // Create image URL using the API endpoint
-                    const imageUrl = `${MCA.baseURL}/nominees/${nomineeId}/image`;
+                    // Use the full image URL from the API response
+                    const imageUrl = nominee.image.startsWith('http') 
+                        ? nominee.image 
+                        : `${MCA.staticURL}${nominee.image}`;
                     
                     return `
                         <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
@@ -165,7 +167,6 @@ function displayCurrentUserQuestion() {
                                 <img src="${imageUrl}" 
                                      alt="${nominee.name}" 
                                      class="nominee-avatar-img"
-                                     crossorigin="anonymous"
                                      onerror="handleImageError(this, '${nomineeName}')"
                                      referrerpolicy="no-referrer">
                             </div>
@@ -491,8 +492,8 @@ function loadUserProfile() {
 (() => {
     const originalFetch = window.fetch;
     window.fetch = function(url, options = {}) {
-        // If this is an image request from our API
-        if (url.includes('/nominees/') && url.includes('/image')) {
+        // If this is an image request from our uploads directory
+        if (url.includes('/uploads/nominees/')) {
             options.headers = {
                 ...options.headers,
                 'Authorization': `Bearer ${MCA.token}`
@@ -502,18 +503,25 @@ function loadUserProfile() {
     };
 })();
 
-// Handle image loading errors
+// Handle image loading errors with better SVG
 function handleImageError(img, nomineeName) {
     console.error('Failed to load image for nominee:', nomineeName);
     
-    // Create SVG with nominee initial
-    const initial = nomineeName.charAt(0);
+    // Create a more visually appealing SVG placeholder
+    const initial = nomineeName.charAt(0).toUpperCase();
+    const colors = {
+        bg: '#f0f0f0',
+        circle: '#e0e0e0',
+        text: '#666'
+    };
+    
     const svg = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-        <rect width="200" height="200" fill="%23f0f0f0"/>
-        <text x="100" y="100" fill="%23999" font-size="80" 
-              text-anchor="middle" dominant-baseline="middle" 
-              font-family="system-ui">${initial}</text>
-    </svg>`;
+        <rect width="200" height="200" fill="${colors.bg}"/>
+        <circle cx="100" cy="100" r="70" fill="${colors.circle}"/>
+        <text x="100" y="120" fill="${colors.text}" font-size="80" 
+              text-anchor="middle" font-family="system-ui, -apple-system, sans-serif"
+              font-weight="500">${initial}</text>
+    </svg>`.replace('#', '%23');
     
     img.src = svg;
     img.onerror = null;
