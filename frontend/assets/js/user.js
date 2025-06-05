@@ -133,10 +133,9 @@ function displayCurrentUserQuestion() {
         id: question.id || question._id,
         title: question.title || 'Untitled Question',
         description: question.description || '',
-        nominees: Array.isArray(question.nominees) ? question.nominees : []
+        nominees: Array.isArray(question.nominees) ? question.nominees : [],
+        userVote: question.userVote || null
     };
-    
-    const hasVoted = userVotes[safeQuestion.id];
     
     questionsContainer.innerHTML = `
         <div class="question-container">
@@ -153,18 +152,20 @@ function displayCurrentUserQuestion() {
                 ${safeQuestion.nominees.map(nominee => {
                     const nomineeId = nominee.id || nominee._id;
                     const nomineeName = nominee.name || 'Unknown';
+                    const isVoted = safeQuestion.userVote === nomineeId;
                     
                     return `
-                        <div class="nominee-card ${hasVoted === nomineeId ? 'selected' : ''}" 
+                        <div class="nominee-card ${isVoted ? 'selected' : ''}" 
                              data-nominee-id="${nomineeId}"
-                             onclick="selectNominee('${safeQuestion.id}', '${nomineeId}')">
+                             onclick="${safeQuestion.userVote ? '' : `selectNominee('${safeQuestion.id}', '${nomineeId}')`}"
+                             style="${safeQuestion.userVote ? 'cursor: default;' : ''}">
                             <div class="nominee-avatar">
                                 <div class="nominee-initial-avatar">${(nominee.name || 'U').charAt(0).toUpperCase()}</div>
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
                             </div>
-                            ${hasVoted === nomineeId ? '<div class="selected-indicator">✓</div>' : ''}
+                            ${isVoted ? '<div class="selected-indicator">✓ Your Vote</div>' : ''}
                         </div>
                     `;
                 }).join('')}
@@ -172,11 +173,11 @@ function displayCurrentUserQuestion() {
             
             <!-- Submit Button -->
             <div class="vote-button-container">
-                <button class="btn btn-primary ${hasVoted ? 'btn-disabled' : ''}" 
+                <button class="btn btn-primary ${safeQuestion.userVote ? 'btn-disabled' : ''}" 
                         id="submitVoteBtn"
                         onclick="submitCurrentVote()"
-                        ${hasVoted ? 'disabled' : ''}>
-                    ${hasVoted ? 'Vote Submitted' : 'Submit Vote'}
+                        ${safeQuestion.userVote ? 'disabled' : ''}>
+                    ${safeQuestion.userVote ? 'Vote Submitted' : 'Submit Vote'}
                 </button>
             </div>
 
@@ -363,7 +364,7 @@ function displayCurrentUserQuestion() {
 
 function selectNominee(questionId, nomineeId) {
     const question = currentQuestions[currentQuestionIndex];
-    if (!question || (question.id || question._id) !== questionId) return;
+    if (!question || (question.id || question._id) !== questionId || question.userVote) return;
     
     // Remove previous selection
     document.querySelectorAll('.nominee-card').forEach(card => {
@@ -383,6 +384,7 @@ function selectNominee(questionId, nomineeId) {
     const submitBtn = document.getElementById('submitVoteBtn');
     if (submitBtn) {
         submitBtn.disabled = false;
+        submitBtn.classList.remove('btn-disabled');
         submitBtn.innerHTML = 'Submit Vote';
     }
 }

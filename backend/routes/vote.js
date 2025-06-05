@@ -32,11 +32,23 @@ router.get('/questions', async (req, res) => {
             .populate('nominees')
             .sort({ createdAt: -1 });
         
+        // Get user's voting history
+        const user = await User.findById(req.user._id, 'votingHistory');
+        const votingHistory = user.votingHistory || [];
+        
+        // Add user's vote information to each question
+        const questionsWithVotes = questions.map(question => {
+            const vote = votingHistory.find(v => v.questionId.toString() === question._id.toString());
+            const questionObj = question.toObject();
+            questionObj.userVote = vote ? vote.votedFor : null;
+            return questionObj;
+        });
+        
         console.log(`Found ${questions.length} questions`);
         
         res.json({ 
             success: true,
-            questions: questions 
+            questions: questionsWithVotes 
         });
     } catch (error) {
         console.error('Error loading questions:', error);
