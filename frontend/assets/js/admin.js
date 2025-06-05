@@ -19,39 +19,27 @@ function showAnalytics() {
 }
 
 function showSettings() {
-    // Hide all sections first
-    document.querySelectorAll('.content-section').forEach(section => {
-        section.style.display = 'none';
-    });
+    const contentBody = document.querySelector('.content-body');
+    if (!contentBody) return;
 
-    // Show settings section
-    const settingsSection = document.getElementById('settings-section') || document.createElement('div');
-    settingsSection.id = 'settings-section';
-    settingsSection.className = 'content-section';
-    settingsSection.style.display = 'block';
-    
-    settingsSection.innerHTML = `
-        <div class="settings-panel">
-            <h2>Voting Control Panel</h2>
-            <div class="control-buttons">
-                <button id="startVotingBtn" class="btn btn-primary btn-large">
-                    <i class="fas fa-play"></i> Start Voting
-                </button>
-                <button id="stopVotingBtn" class="btn btn-danger btn-large" style="display: none;">
-                    <i class="fas fa-stop"></i> Stop Voting
-                </button>
-            </div>
-            <div class="status-panel">
-                <p>Current Status: <span id="votingStatusText">Checking...</span></p>
+    contentBody.innerHTML = `
+        <div class="settings-section">
+            <div class="voting-control">
+                <h2>Voting Control</h2>
+                <div class="control-buttons">
+                    <button id="startVotingBtn" class="btn btn-primary btn-large">
+                        <i class="fas fa-play"></i> Start Voting
+                    </button>
+                    <button id="stopVotingBtn" class="btn btn-danger btn-large" style="display: none;">
+                        <i class="fas fa-stop"></i> Stop Voting
+                    </button>
+                </div>
+                <div class="voting-status">
+                    Status: <span id="votingStatusText">Checking...</span>
+                </div>
             </div>
         </div>
     `;
-
-    // Add to page if not already there
-    const contentBody = document.querySelector('.content-body');
-    if (!contentBody.contains(settingsSection)) {
-        contentBody.appendChild(settingsSection);
-    }
 
     // Add event listeners
     document.getElementById('startVotingBtn').addEventListener('click', startVoting);
@@ -139,7 +127,7 @@ function displayCurrentAdminQuestion() {
             <div class="question-header">
                 <h2>${question.title}</h2>
                 <span class="status ${question.isActive ? 'active' : 'inactive'}">
-                    ${question.isActive ? 'Active' : 'Inactive'}
+                    ${question.isActive ? '🟢 Active' : '🔴 Inactive'}
                 </span>
             </div>
 
@@ -148,7 +136,7 @@ function displayCurrentAdminQuestion() {
             </div>
 
             <div class="nominees-section">
-                <h3>Nominees (${question.nominees.length})</h3>
+                <h3>Nominees</h3>
                 <div class="nominees-grid">
                     ${question.nominees.map((nominee, index) => `
                         <div class="nominee-card">
@@ -195,107 +183,93 @@ function nextAdminQuestion() {
 
 // Question CRUD operations
 function showCreateQuestion() {
-    const modal = document.getElementById('questionModal');
+    showQuestionModal();
+}
+
+function showQuestionModal(questionData = null) {
+    const modal = document.getElementById('questionModal') || document.createElement('div');
+    modal.id = 'questionModal';
+    modal.className = 'modal';
+    
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Create New Question</h2>
-                <button onclick="closeModal()" class="close-btn">&times;</button>
+                <h2>${questionData ? 'Edit Question' : 'Create Question'}</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
-            <form id="questionForm" onsubmit="handleQuestionSubmit(event)">
+            <form id="questionForm">
                 <div class="form-group">
                     <label>Question Title</label>
-                    <input type="text" name="title" required>
+                    <input type="text" name="title" value="${questionData?.title || ''}" required>
                 </div>
+                
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea name="description" required></textarea>
+                    <textarea name="description" required>${questionData?.description || ''}</textarea>
                 </div>
-                <div class="nominees-container">
+                
+                <div class="nominees-section">
                     <h3>Nominees</h3>
-                    <div id="nomineesList"></div>
+                    <div id="nomineesList">
+                        ${questionData?.nominees?.map(nominee => `
+                            <div class="nominee-input">
+                                <input type="text" class="nominee-name" value="${nominee.name}" required>
+                                <button type="button" onclick="removeNominee(this)" class="btn-remove">Remove</button>
+                            </div>
+                        `).join('') || `
+                            <div class="nominee-input">
+                                <input type="text" class="nominee-name" required>
+                                <button type="button" onclick="removeNominee(this)" class="btn-remove">Remove</button>
+                            </div>
+                            <div class="nominee-input">
+                                <input type="text" class="nominee-name" required>
+                                <button type="button" onclick="removeNominee(this)" class="btn-remove">Remove</button>
+                            </div>
+                        `}
+                    </div>
                     <button type="button" onclick="addNominee()" class="btn btn-secondary">
                         Add Nominee
                     </button>
                 </div>
+
                 <div class="modal-actions">
-                    <button type="submit" class="btn btn-primary">Create Question</button>
+                    <button type="submit" class="btn btn-primary">
+                        ${questionData ? 'Update Question' : 'Create Question'}
+                    </button>
                     <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
                 </div>
             </form>
         </div>
     `;
 
-    addNominee();
-    addNominee();
+    document.body.appendChild(modal);
     modal.style.display = 'block';
+
+    // Setup form submission
+    const form = document.getElementById('questionForm');
+    form.onsubmit = (e) => handleQuestionSubmit(e, questionData?.id);
 }
 
-function editQuestion(questionId) {
-    const question = adminQuestions.find(q => q.id === questionId);
-    if (!question) return;
-
-    const modal = document.getElementById('questionModal');
-    modal.innerHTML = `
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Edit Question</h2>
-                <button onclick="closeModal()" class="close-btn">&times;</button>
-            </div>
-            <form id="questionForm" onsubmit="handleQuestionSubmit(event)">
-                <input type="hidden" name="questionId" value="${question.id}">
-                <div class="form-group">
-                    <label>Question Title</label>
-                    <input type="text" name="title" value="${question.title}" required>
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea name="description" required>${question.description}</textarea>
-                </div>
-                <div class="nominees-container">
-                    <h3>Nominees</h3>
-                    <div id="nomineesList"></div>
-                    <button type="button" onclick="addNominee()" class="btn btn-secondary">
-                        Add Nominee
-                    </button>
-                </div>
-                <div class="modal-actions">
-                    <button type="submit" class="btn btn-primary">Update Question</button>
-                    <button type="button" onclick="closeModal()" class="btn btn-secondary">Cancel</button>
-                </div>
-            </form>
-        </div>
-    `;
-
-    question.nominees.forEach(nominee => addNominee(nominee.name));
-    modal.style.display = 'block';
-}
-
-async function handleQuestionSubmit(event) {
-    event.preventDefault();
+async function handleQuestionSubmit(e, questionId = null) {
+    e.preventDefault();
     showLoading();
 
-    const form = event.target;
-    const formData = {
-        title: form.querySelector('[name="title"]').value,
-        description: form.querySelector('[name="description"]').value,
-        nominees: Array.from(form.querySelectorAll('.nominee-input'))
-            .map(input => input.value.trim())
-            .filter(name => name)
-    };
-
-    if (formData.nominees.length < 2) {
-        showToast('At least 2 nominees are required', 'error');
-        hideLoading();
-        return;
-    }
-
-    const questionId = form.querySelector('[name="questionId"]')?.value;
-    const isEdit = !!questionId;
-
     try {
-        const response = await fetch(`${MCA.baseURL}/admin/questions${isEdit ? `/${questionId}` : ''}`, {
-            method: isEdit ? 'PUT' : 'POST',
+        const form = e.target;
+        const formData = {
+            title: form.querySelector('[name="title"]').value,
+            description: form.querySelector('[name="description"]').value,
+            nominees: Array.from(form.querySelectorAll('.nominee-name'))
+                .map(input => ({ name: input.value.trim() }))
+                .filter(nominee => nominee.name)
+        };
+
+        if (formData.nominees.length < 2) {
+            throw new Error('At least 2 nominees are required');
+        }
+
+        const response = await fetch(`${MCA.baseURL}/admin/questions${questionId ? `/${questionId}` : ''}`, {
+            method: questionId ? 'PUT' : 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${MCA.token}`
@@ -303,14 +277,15 @@ async function handleQuestionSubmit(event) {
             body: JSON.stringify(formData)
         });
 
-        if (response.ok) {
-            showToast(`Question ${isEdit ? 'updated' : 'created'} successfully!`, 'success');
-            closeModal();
-            loadQuestions();
-        } else {
-            const data = await response.json();
-            throw new Error(data.error || 'Failed to save question');
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to save question');
         }
+
+        showToast(questionId ? 'Question updated!' : 'Question created!', 'success');
+        closeModal();
+        loadQuestions();
+
     } catch (error) {
         showToast(error.message, 'error');
     } finally {
@@ -792,18 +767,18 @@ async function checkVotingStatus() {
             const data = await response.json();
             const startBtn = document.getElementById('startVotingBtn');
             const stopBtn = document.getElementById('stopVotingBtn');
-            const statusIndicator = document.querySelector('.status-indicator');
+            const statusText = document.getElementById('votingStatusText');
 
             if (data.data.isActive) {
                 startBtn.style.display = 'none';
                 stopBtn.style.display = 'block';
-                statusIndicator.textContent = 'Voting is Active';
-                statusIndicator.className = 'status-indicator active';
+                statusText.textContent = '🟢 Voting is Active';
+                statusText.className = 'status-active';
             } else {
                 startBtn.style.display = 'block';
                 stopBtn.style.display = 'none';
-                statusIndicator.textContent = 'Voting is Inactive';
-                statusIndicator.className = 'status-indicator inactive';
+                statusText.textContent = '🔴 Voting is Inactive';
+                statusText.className = 'status-inactive';
             }
         }
     } catch (error) {
@@ -818,19 +793,18 @@ async function startVoting() {
             headers: {
                 'Authorization': `Bearer ${MCA.token}`,
                 'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ duration: 24 }) // Default 24 hours, no user input needed
+            }
         });
 
         if (response.ok) {
-            showToast('Voting started successfully!', 'success');
+            showToast('Voting started!', 'success');
             checkVotingStatus();
-            loadQuestions(); // Refresh questions list
+            loadQuestions();
         } else {
             throw new Error('Failed to start voting');
         }
     } catch (error) {
-        showToast('Failed to start voting', 'error');
+        showToast(error.message, 'error');
     }
 }
 
@@ -846,13 +820,13 @@ async function stopVoting() {
         });
 
         if (response.ok) {
-            showToast('Voting stopped successfully!', 'success');
+            showToast('Voting stopped!', 'success');
             checkVotingStatus();
-            loadQuestions(); // Refresh questions list
+            loadQuestions();
         } else {
             throw new Error('Failed to stop voting');
         }
     } catch (error) {
-        showToast('Failed to stop voting', 'error');
+        showToast(error.message, 'error');
     }
 }

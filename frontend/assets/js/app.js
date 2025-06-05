@@ -133,7 +133,6 @@ function setupAdminNavigation() {
 }
 
 function handleNavigation(section) {
-    console.log('Navigation clicked:', section);
     console.log('Handling navigation to:', section);
     
     // Update active states
@@ -149,9 +148,11 @@ function handleNavigation(section) {
     // Hide all content sections first
     const questionsContent = document.getElementById('questionsContent');
     const analyticsContent = document.getElementById('analyticsContent');
+    const settingsContent = document.getElementById('settingsContent');
     
     if (questionsContent) questionsContent.classList.add('hidden');
     if (analyticsContent) analyticsContent.classList.add('hidden');
+    if (settingsContent) settingsContent.classList.add('hidden');
 
     // Handle section content
     switch(section) {
@@ -177,10 +178,127 @@ function handleNavigation(section) {
             }
             break;
         case 'settings':
-            pageTitle.textContent = 'Settings';
+            pageTitle.textContent = 'Voting Control';
             newQuestionBtn.style.display = 'none';
-            showToast('Settings coming soon!', 'info');
+            showSettings();
             break;
+    }
+}
+
+function showSettings() {
+    const container = document.getElementById('settingsContent');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'settingsContent';
+        document.querySelector('.content-body').appendChild(container);
+    }
+    
+    container.className = 'content-section';
+    container.innerHTML = `
+        <div class="settings-container">
+            <div class="settings-card">
+                <h2>Voting Control</h2>
+                <div class="settings-actions">
+                    <button id="startVotingBtn" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Start Voting
+                    </button>
+                    <button id="stopVotingBtn" class="btn btn-danger">
+                        <i class="fas fa-stop"></i> Stop Voting
+                    </button>
+                </div>
+                <div id="votingStatus" class="voting-status">
+                    Checking status...
+                </div>
+            </div>
+        </div>
+    `;
+
+    container.classList.remove('hidden');
+    
+    // Add event listeners
+    document.getElementById('startVotingBtn').addEventListener('click', startVoting);
+    document.getElementById('stopVotingBtn').addEventListener('click', stopVoting);
+    
+    // Check current status
+    checkVotingStatus();
+}
+
+async function startVoting() {
+    try {
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/start`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${MCA.token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            showToast('Voting started successfully!', 'success');
+            checkVotingStatus();
+        } else {
+            throw new Error('Failed to start voting');
+        }
+    } catch (error) {
+        showToast('Failed to start voting: ' + error.message, 'error');
+    }
+}
+
+async function stopVoting() {
+    if (!confirm('Are you sure you want to stop voting? This will end the session for all users.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/end`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${MCA.token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            showToast('Voting stopped successfully!', 'success');
+            checkVotingStatus();
+        } else {
+            throw new Error('Failed to stop voting');
+        }
+    } catch (error) {
+        showToast('Failed to stop voting: ' + error.message, 'error');
+    }
+}
+
+async function checkVotingStatus() {
+    try {
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/status`, {
+            headers: {
+                'Authorization': `Bearer ${MCA.token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const statusDiv = document.getElementById('votingStatus');
+            const startBtn = document.getElementById('startVotingBtn');
+            const stopBtn = document.getElementById('stopVotingBtn');
+            
+            if (statusDiv && startBtn && stopBtn) {
+                if (data.isActive) {
+                    statusDiv.innerHTML = `<span class="status-active">🟢 Voting is ACTIVE</span>`;
+                    startBtn.style.display = 'none';
+                    stopBtn.style.display = 'block';
+                } else {
+                    statusDiv.innerHTML = `<span class="status-inactive">🔴 Voting is INACTIVE</span>`;
+                    startBtn.style.display = 'block';
+                    stopBtn.style.display = 'none';
+                }
+            }
+        } else {
+            throw new Error('Failed to check voting status');
+        }
+    } catch (error) {
+        showToast('Failed to check voting status: ' + error.message, 'error');
     }
 }
 
@@ -424,54 +542,20 @@ function displayCurrentQuestion() {
         title: question.title || 'Untitled Question',
         description: question.description || '',
         isActive: Boolean(question.isActive),
-        startTime: question.startTime || new Date().toISOString(),
-        endTime: question.endTime || new Date().toISOString(),
-        status: question.status || 'unknown',
         nominees: Array.isArray(question.nominees) ? question.nominees : []
     };
-
-    // Safe date formatting
-    const formatDate = (dateStr) => {
-        try {
-            if (!dateStr) return 'N/A';
-            return new Date(dateStr).toLocaleDateString();
-        } catch (e) {
-            console.error('Date formatting error:', e);
-            return 'N/A';
-        }
-    };
-
-    // Get status display
-    const getStatusDisplay = (status, isActive) => {
-        if (!isActive) return { text: 'INACTIVE', class: 'inactive', icon: '🔴' };
-        switch(status) {
-            case 'active': return { text: 'ACTIVE', class: 'active', icon: '🟢' };
-            case 'scheduled': return { text: 'SCHEDULED', class: 'scheduled', icon: '⏳' };
-            case 'expired': return { text: 'EXPIRED', class: 'expired', icon: '⏰' };
-            default: return { text: 'UNKNOWN', class: 'inactive', icon: '❓' };
-        }
-    };
-
-    const statusInfo = getStatusDisplay(safeQuestion.status, safeQuestion.isActive);
 
     try {
         container.innerHTML = `
             <div class="question-display">
                 <div class="question-header">
                     <h2 class="question-title">${safeQuestion.title}</h2>
-                    <span class="question-status ${statusInfo.class}">
-                        ${statusInfo.icon} ${statusInfo.text}
+                    <span class="question-status ${safeQuestion.isActive ? 'active' : 'inactive'}">
+                        ${safeQuestion.isActive ? '🟢 ACTIVE' : '🔴 INACTIVE'}
                     </span>
                 </div>
 
-                <div class="question-meta">
-                    <span class="meta-item">📅 Start: ${formatDate(safeQuestion.startTime)}</span>
-                    <span class="meta-item">📅 End: ${formatDate(safeQuestion.endTime)}</span>
-                    <span class="meta-item">👥 ${safeQuestion.nominees.length} nominees</span>
-                </div>
-
                 <div class="question-description">
-                    <h3>Description</h3>
                     <p>${safeQuestion.description}</p>
                 </div>
 
@@ -480,8 +564,6 @@ function displayCurrentQuestion() {
                     <div class="nominees-grid-clean">
                         ${safeQuestion.nominees.map((nominee, index) => {
                             const name = nominee.name || 'Unknown';
-                            
-                            // Check if nominee has an actual uploaded image (not null and not default)
                             const hasActualImage = nominee.image && nominee.image !== null;
                             
                             return `
@@ -499,7 +581,7 @@ function displayCurrentQuestion() {
                                         }
                                         <div class="nominee-details">
                                             <h4>${name}</h4>
-                                            <span class="nominee-position">#${index + 1}</span>
+                                            <span class="nominee-votes">${nominee.votes || 0} votes</span>
                                         </div>
                                     </div>
                                 </div>
@@ -514,10 +596,6 @@ function displayCurrentQuestion() {
                     </button>
                     <button class="btn btn-info" onclick="viewResults('${safeQuestion.id}')">
                         📊 View Results
-                    </button>
-                    <button class="btn ${safeQuestion.isActive ? 'btn-warning' : 'btn-success'}" 
-                            onclick="toggleQuestionStatus('${safeQuestion.id}', ${!safeQuestion.isActive})">
-                        ${safeQuestion.isActive ? '⏸️ Pause' : '▶️ Activate'}
                     </button>
                     <button class="btn btn-danger" onclick="deleteQuestion('${safeQuestion.id}')">
                         🗑️ Delete
@@ -583,27 +661,12 @@ function showQuestionModal(questionData = null) {
     
     const isEdit = questionData !== null;
     
-    // Create modal if it doesn't exist
     let modal = document.getElementById('questionModal');
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'questionModal';
         modal.className = 'modal-overlay';
         document.body.appendChild(modal);
-    }
-
-    // For edit mode, calculate duration from start and end times
-    let calculatedDuration = 3;
-    if (isEdit && questionData.startTime && questionData.endTime) {
-        try {
-            const start = new Date(questionData.startTime);
-            const end = new Date(questionData.endTime);
-            const durationMs = end - start;
-            calculatedDuration = Math.round(durationMs / (1000 * 60 * 60));
-        } catch (error) {
-            console.error('Error calculating duration:', error);
-            calculatedDuration = 3;
-        }
     }
 
     modal.innerHTML = `
@@ -625,12 +688,6 @@ function showQuestionModal(questionData = null) {
                               rows="3" required>${questionData?.description || ''}</textarea>
                 </div>
                 
-                <div class="form-group duration-group">
-                    <label for="questionDuration">Duration (hours)</label>
-                    <input type="number" id="questionDuration" placeholder="Enter duration in hours" 
-                           min="1" max="168" value="${calculatedDuration}" required>
-                </div>
-                
                 <div class="nominees-container">
                     <label>Nominees</label>
                     <div id="nomineesContainer">
@@ -640,22 +697,6 @@ function showQuestionModal(questionData = null) {
                                     <input type="text" placeholder="Nominee name" value="${n.name || ''}" required>
                                     <button type="button" onclick="removeNomineeInput(this)" class="btn-remove">Remove</button>
                                 </div>
-                                <div class="nominee-image-section">
-                                    <label class="image-upload-label">
-                                        <span>Upload Image (Optional)</span>
-                                        <input type="file" 
-                                               name="nominee_${index}_image" 
-                                               accept="image/*" 
-                                               onchange="previewImage(this)">
-                                    </label>
-                                    <div class="image-preview" onclick="showImagePreview(this)">
-                                        ${n.image && n.image !== null ? 
-                                            `<img src="${MCA.staticURL}${n.image}" alt="Preview" class="preview-img">
-                                             <button type="button" onclick="removeImage(this); event.stopPropagation();" class="btn-remove-img">×</button>` : 
-                                            '<span class="no-image">No image selected</span>'
-                                        }
-                                    </div>
-                                </div>
                             </div>
                         `).join('') || `
                             <div class="nominee-input" data-index="0">
@@ -663,35 +704,11 @@ function showQuestionModal(questionData = null) {
                                     <input type="text" placeholder="Nominee name" required>
                                     <button type="button" onclick="removeNomineeInput(this)" class="btn-remove">Remove</button>
                                 </div>
-                                <div class="nominee-image-section">
-                                    <label class="image-upload-label">
-                                        <span>Upload Image (Optional)</span>
-                                        <input type="file" 
-                                               name="nominee_0_image" 
-                                               accept="image/*" 
-                                               onchange="previewImage(this)">
-                                    </label>
-                                    <div class="image-preview" onclick="showImagePreview(this)">
-                                        <span class="no-image">No image selected</span>
-                                    </div>
-                                </div>
                             </div>
                             <div class="nominee-input" data-index="1">
                                 <div class="nominee-basic-info">
                                     <input type="text" placeholder="Nominee name" required>
                                     <button type="button" onclick="removeNomineeInput(this)" class="btn-remove">Remove</button>
-                                </div>
-                                <div class="nominee-image-section">
-                                    <label class="image-upload-label">
-                                        <span>Upload Image (Optional)</span>
-                                        <input type="file" 
-                                               name="nominee_1_image" 
-                                               accept="image/*" 
-                                               onchange="previewImage(this)">
-                                    </label>
-                                    <div class="image-preview" onclick="showImagePreview(this)">
-                                        <span class="no-image">No image selected</span>
-                                    </div>
                                 </div>
                             </div>
                         `}
@@ -713,20 +730,15 @@ function showQuestionModal(questionData = null) {
         </div>
     `;
 
-    // Show modal with proper CSS classes
     modal.style.display = 'flex';
-    // Trigger animation after DOM update
     requestAnimationFrame(() => {
         modal.classList.add('show');
     });
 
-    // Setup form submission
     const form = document.getElementById('questionForm');
     form.addEventListener('submit', (e) => {
         handleQuestionSubmit(e, isEdit, questionData?.id || questionData?._id);
     });
-    
-    console.log('Modal created and shown');
 }
 
 function closeQuestionModal() {
@@ -757,18 +769,6 @@ function addNomineeInput() {
             <input type="text" placeholder="Nominee name" required>
             <button type="button" onclick="removeNomineeInput(this)" class="btn-remove">Remove</button>
         </div>
-        <div class="nominee-image-section">
-            <label class="image-upload-label">
-                <span>Upload Image (Optional)</span>
-                <input type="file" 
-                       name="nominee_${nextIndex}_image" 
-                       accept="image/*" 
-                       onchange="previewImage(this)">
-            </label>
-            <div class="image-preview" onclick="showImagePreview(this)">
-                <span class="no-image">No image selected</span>
-            </div>
-        </div>
     `;
     
     container.appendChild(nomineeDiv);
@@ -784,10 +784,6 @@ function removeNomineeInput(button) {
         const remainingInputs = container.querySelectorAll('.nominee-input');
         remainingInputs.forEach((input, index) => {
             input.setAttribute('data-index', index);
-            const fileInput = input.querySelector('input[type="file"]');
-            if (fileInput) {
-                fileInput.setAttribute('name', `nominee_${index}_image`);
-            }
         });
     } else {
         showToast('At least 2 nominees are required', 'warning');
@@ -796,37 +792,29 @@ function removeNomineeInput(button) {
 
 async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
     e.preventDefault();
-
     console.log('🚀 QUESTION SUBMIT STARTED');
     console.log('- Is Edit:', isEdit);
     console.log('- Question ID:', questionId);
 
-    // Show INSTANT feedback FIRST - before any processing
     const submitButton = e.target.querySelector('button[type="submit"]');
     const originalText = submitButton.innerHTML;
     submitButton.innerHTML = '⚡ Creating...';
     submitButton.disabled = true;
 
     try {
-        // Prepare form data quickly
         const title = document.getElementById('questionTitle').value.trim();
         const description = document.getElementById('questionDescription').value.trim();
-        const duration = parseInt(document.getElementById('questionDuration').value);
 
         console.log('📝 FORM DATA EXTRACTED:');
         console.log('- Title:', title);
         console.log('- Description:', description);
-        console.log('- Duration:', duration);
 
-        // Validate inputs
-        if (!title || !description || !duration) {
+        if (!title || !description) {
             throw new Error('Please fill in all required fields');
         }
 
-        // Collect nominee names efficiently
         const nomineeInputs = document.querySelectorAll('#nomineesContainer .nominee-input');
         const nominees = [];
-        const imageFiles = [];
         
         console.log('👥 PROCESSING NOMINEES:');
         console.log('- Found nominee inputs:', nomineeInputs.length);
@@ -843,76 +831,31 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
                 };
                 nominees.push(nomineeData);
                 console.log(`✅ Added nominee ${i + 1}:`, nomineeData);
-
-                // Collect image files separately
-                const fileInput = input.querySelector('input[type="file"]');
-                if (fileInput && fileInput.files[0]) {
-                    const file = fileInput.files[0];
-                    
-                    console.log(`📸 Image found for nominee ${i + 1}:`, {
-                        name: file.name,
-                        size: file.size,
-                        type: file.type
-                    });
-                    
-                    // Validate file size (10MB limit)
-                    if (file.size > 10 * 1024 * 1024) {
-                        throw new Error(`Image ${file.name} is too large. Maximum size is 10MB.`);
-                    }
-                    
-                    imageFiles.push({
-                        file: file,
-                        nomineeIndex: i,
-                        nomineeName: nameInput.value.trim()
-                    });
-                }
             }
         }
-
-        console.log('📊 NOMINEES SUMMARY:');
-        console.log('- Total nominees:', nominees.length);
-        console.log('- Nominees data:', nominees);
-        console.log('- Images to upload:', imageFiles.length);
-        console.log('- Image files:', imageFiles.map(f => ({ name: f.nomineeName, fileName: f.file.name })));
 
         if (nominees.length < 2) {
             throw new Error('At least 2 nominees are required');
         }
 
-        // STEP 1: Create question WITHOUT images (INSTANT!)
         submitButton.innerHTML = '✅ Creating question...';
         
         const questionData = {
             title,
             description,
-            duration,
-            nominees: nominees.map(n => ({ name: n.name })) // Just names, no images
+            nominees: nominees.map(n => ({ name: n.name }))
         };
-
-        console.log('📤 SENDING QUESTION DATA:');
-        console.log('- Data:', JSON.stringify(questionData, null, 2));
 
         const url = isEdit ? 
             `${MCA.baseURL}/admin/questions/${questionId}` : 
             `${MCA.baseURL}/admin/questions`;
         const method = isEdit ? 'PUT' : 'POST';
-        
-        console.log('🌐 REQUEST DETAILS:');
-        console.log('- URL:', url);
-        console.log('- Method:', method);
-        console.log('- Base URL:', MCA.baseURL);
 
-        // Check if token exists
         const token = localStorage.getItem('token');
         if (!token) {
             throw new Error('No authentication token found. Please login again.');
         }
-        
-        console.log('🔑 Token exists:', !!token);
-        console.log('🔑 Token preview:', token ? token.substring(0, 20) + '...' : 'none');
-        
-        // Create question with JSON (FAST!)
-        console.log('📨 MAKING REQUEST...');
+
         const response = await fetch(url, {
             method: method,
             headers: {
@@ -922,133 +865,35 @@ async function handleQuestionSubmit(e, isEdit = false, questionId = null) {
             body: JSON.stringify(questionData)
         });
 
-        console.log('📨 RESPONSE RECEIVED:');
-        console.log('- Status:', response.status);
-        console.log('- Status Text:', response.statusText);
-        console.log('- OK:', response.ok);
-        console.log('- Headers:', Object.fromEntries(response.headers.entries()));
-        
         if (!response.ok) {
             let errorMessage;
             let responseText;
             try {
                 responseText = await response.text();
-                console.log('❌ Response body (text):', responseText);
-                
-                // Try to parse as JSON
                 const errorData = JSON.parse(responseText);
-                console.log('❌ Parsed error data:', errorData);
                 errorMessage = errorData.error || errorData.message || `Server error: ${response.status}`;
             } catch (parseError) {
-                console.log('❌ Could not parse error response as JSON:', parseError);
                 errorMessage = responseText || `HTTP ${response.status}: ${response.statusText}`;
             }
             throw new Error(errorMessage);
         }
 
         const data = await response.json();
-        console.log('✅ SUCCESS RESPONSE:', data);
 
         if (data.success) {
-            // Show success immediately
             submitButton.innerHTML = '🎉 Success!';
-            
-            // Show immediate success message
-            const hasImages = imageFiles.length > 0;
-            const message = hasImages ? 
-                `${isEdit ? 'Question updated!' : 'Question created!'} ${imageFiles.length} image(s) will upload in background.` :
-                `${isEdit ? 'Question updated!' : 'Question created!'} successfully!`;
-            
-            showToast(message, 'success');
-            
-            // Close modal immediately
+            showToast(isEdit ? 'Question updated!' : 'Question created!', 'success');
             closeQuestionModal();
-            
-            // Refresh questions list immediately - show question with CSS avatars
             loadAdminQuestions();
-
-            // STEP 2: Upload images in background (AFTER question is created and shown)
-            if (hasImages && data.data && data.data.nominees) {
-                console.log('🖼️ Starting background image uploads...');
-                uploadImagesInBackground(data.data, imageFiles);
-            }
         } else {
             throw new Error(data.error || 'Operation failed');
         }
 
     } catch (error) {
         console.error('❌ QUESTION SUBMIT ERROR:', error);
-        console.error('❌ Error stack:', error.stack);
-        
-        let errorMessage = error.message || 'Unknown error occurred';
-        
-        // Handle specific error types
-        if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            errorMessage = 'Cannot connect to server. Please check if the server is running on port 3000.';
-        } else if (error.message.includes('Failed to fetch')) {
-            errorMessage = 'Network error. Please check your internet connection and server status.';
-        }
-        
-        showToast(errorMessage, 'error');
-        
-        // Restore button on error
+        showToast(error.message, 'error');
         submitButton.innerHTML = originalText;
         submitButton.disabled = false;
-    }
-}
-
-// New function to upload images in background
-async function uploadImagesInBackground(questionData, imageFiles) {
-    console.log(`🖼️ Starting background upload of ${imageFiles.length} images...`);
-    
-    try {
-        // Upload each image separately
-        for (const imageData of imageFiles) {
-            const { file, nomineeIndex, nomineeName } = imageData;
-            
-            // Find the corresponding nominee in the created question
-            const nominee = questionData.nominees.find(n => 
-                n.name.toLowerCase().trim() === nomineeName.toLowerCase().trim()
-            );
-            
-            if (!nominee) {
-                console.error(`Nominee not found for image: ${nomineeName}`);
-                continue;
-            }
-
-            console.log(`📤 Uploading image for nominee: ${nomineeName}`);
-            
-            // Create FormData for this single image
-            const formData = new FormData();
-            formData.append('nomineeId', nominee._id);
-            formData.append('questionId', questionData._id);
-            formData.append('image', file);
-            
-            // Upload in background (don't wait for response)
-            fetch(`${MCA.baseURL}/admin/nominees/${nominee._id}/image`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: formData
-            }).then(response => {
-                if (response.ok) {
-                    console.log(`✅ Image uploaded successfully for ${nomineeName}`);
-                    // Refresh the questions list to show updated image
-                    loadAdminQuestions();
-                } else {
-                    console.error(`❌ Image upload failed for ${nomineeName}:`, response.status);
-                }
-            }).catch(error => {
-                console.error(`❌ Image upload error for ${nomineeName}:`, error);
-            });
-        }
-        
-        showToast(`Background upload started for ${imageFiles.length} image(s)`, 'info');
-        
-    } catch (error) {
-        console.error('Background image upload error:', error);
-        showToast('Some images may not upload properly', 'warning');
     }
 }
 
@@ -1081,8 +926,6 @@ function showResultsModal(question) {
         description: question.description || '',
         isActive: Boolean(question.isActive),
         status: question.status || 'unknown',
-        startTime: question.startTime || new Date().toISOString(),
-        endTime: question.endTime || new Date().toISOString(),
         nominees: Array.isArray(question.nominees) ? question.nominees : []
     };
 
@@ -1148,12 +991,6 @@ function showResultsModal(question) {
                         <div class="question-meta">
                             <span class="meta-badge status-${statusInfo.class}">
                                 ${statusInfo.icon} ${statusInfo.text}
-                            </span>
-                            <span class="meta-badge">
-                                📅 Started: ${formatDate(safeQuestion.startTime)}
-                            </span>
-                            <span class="meta-badge">
-                                ⏰ Ends: ${formatDate(safeQuestion.endTime)}
                             </span>
                         </div>
                     </div>
