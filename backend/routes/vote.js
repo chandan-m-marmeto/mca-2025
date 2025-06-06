@@ -31,50 +31,54 @@ router.get('/questions', async (req, res) => {
             });
         }
         
-        // If voting is active, return all questions
+        // If voting is active, return all questions with nominees
         const questions = await Question.find()
-            .populate({
-                path: 'nominees',
-                select: '_id id name department votes oldIds'
-            })
+            .populate('nominees')
             .sort({ createdAt: -1 });
         
         console.log(`Found ${questions.length} questions in database`);
         
-        // Get user's voting history
-        const user = await User.findById(req.user._id, 'votingHistory');
+        // Get user's voting history with nominee details
+        const user = await User.findById(req.user._id)
+            .populate('votingHistory.votedFor')
+            .populate('votingHistory.questionId');
+            
         const votingHistory = user.votingHistory || [];
         console.log('User voting history:', JSON.stringify(votingHistory, null, 2));
         
         // Add user's vote information to each question
-        const questionsWithVotes = questions.map(question => {
-            const vote = votingHistory.find(v => v.questionId.toString() === question._id.toString());
+        const questionsWithVotes = await Promise.all(questions.map(async question => {
             const questionObj = question.toObject();
             
-            // Add vote information
-            questionObj.userVote = vote ? vote.votedFor : null;
+            // Find vote for this question
+            const vote = votingHistory.find(v => 
+                v.questionId && 
+                v.questionId._id && 
+                v.questionId._id.toString() === question._id.toString()
+            );
             
-            // Ensure nominees have oldIds array
-            if (questionObj.nominees) {
-                questionObj.nominees = questionObj.nominees.map(nominee => ({
-                    ...nominee,
-                    oldIds: nominee.oldIds || []
-                }));
+            // If there's a vote, find the corresponding nominee in current nominees
+            if (vote && vote.votedFor) {
+                const votedNominee = await Nominee.findById(vote.votedFor);
+                if (votedNominee) {
+                    // Find matching nominee by name (since IDs may have changed)
+                    const matchingNominee = question.nominees.find(n => 
+                        n.name.toLowerCase().trim() === votedNominee.name.toLowerCase().trim()
+                    );
+                    
+                    questionObj.userVote = matchingNominee ? matchingNominee._id : null;
+                    
+                    console.log(`Question ${question._id} vote mapping:`, {
+                        questionTitle: question.title,
+                        originalVoteId: vote.votedFor,
+                        votedNomineeName: votedNominee.name,
+                        matchingNomineeId: matchingNominee ? matchingNominee._id : null
+                    });
+                }
             }
             
-            console.log(`Question ${question._id}:`, {
-                title: question.title,
-                hasUserVoted: !!vote,
-                votedFor: vote ? vote.votedFor : 'none',
-                nominees: questionObj.nominees.map(n => ({
-                    id: n._id,
-                    name: n.name,
-                    oldIds: n.oldIds
-                }))
-            });
-            
             return questionObj;
-        });
+        }));
         
         console.log('Sending response with processed questions');
         

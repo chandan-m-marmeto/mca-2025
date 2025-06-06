@@ -193,20 +193,13 @@ function displayCurrentUserQuestion() {
                     const nomineeName = nominee.name || 'Unknown';
                     
                     // Check if this nominee was voted for
-                    const isVoted = safeQuestion.userVote && 
-                        (nomineeId === safeQuestion.userVote || 
-                         nomineeId.toString() === safeQuestion.userVote.toString());
+                    const isVoted = safeQuestion.userVote && nomineeId.toString() === safeQuestion.userVote.toString();
                     
                     console.log(`Nominee "${nomineeName}" Details:`, {
                         nomineeId,
                         isVoted,
                         userVote: safeQuestion.userVote,
-                        comparison: {
-                            nomineeId,
-                            userVote: safeQuestion.userVote,
-                            matches: isVoted,
-                            stringComparison: `${nomineeId.toString()} === ${safeQuestion.userVote?.toString()}`
-                        }
+                        comparison: `${nomineeId} === ${safeQuestion.userVote}`
                     });
                     
                     const cardClasses = [
