@@ -154,7 +154,11 @@ function displayCurrentUserQuestion() {
         title: question.title,
         userVoteFromQuestion: question.userVote,
         userVoteFromStore: userVotes[questionId],
-        finalVoteUsed: currentVote
+        finalVoteUsed: currentVote,
+        nominees: question.nominees.map(n => ({
+            id: n._id || n.id,
+            name: n.name
+        }))
     });
 
     // Safe access to question properties
@@ -185,23 +189,23 @@ function displayCurrentUserQuestion() {
             
             <div class="nominees-grid">
                 ${safeQuestion.nominees.map(nominee => {
-                    const nomineeId = nominee.id || nominee._id;
+                    const nomineeId = nominee._id || nominee.id;
                     const nomineeName = nominee.name || 'Unknown';
                     
-                    // Check if this nominee was voted for by comparing IDs
+                    // Check if this nominee was voted for
                     const isVoted = safeQuestion.userVote && 
                         (nomineeId === safeQuestion.userVote || 
-                         nominee.oldIds?.includes(safeQuestion.userVote));
+                         nomineeId.toString() === safeQuestion.userVote.toString());
                     
                     console.log(`Nominee "${nomineeName}" Details:`, {
                         nomineeId,
                         isVoted,
                         userVote: safeQuestion.userVote,
-                        oldIds: nominee.oldIds,
                         comparison: {
                             nomineeId,
                             userVote: safeQuestion.userVote,
-                            matches: isVoted
+                            matches: isVoted,
+                            stringComparison: `${nomineeId.toString()} === ${safeQuestion.userVote?.toString()}`
                         }
                     });
                     
