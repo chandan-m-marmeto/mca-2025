@@ -48,7 +48,7 @@ async function loadUserQuestions() {
                 const questionId = question.id || question._id;
                 if (question.userVote) {
                     console.log(`Found vote for question ${questionId}:`, question.userVote);
-                    userVotes[questionId] = question.userVote;
+                    userVotes[questionId] = question.userVote.toString();
                 }
             });
             
@@ -167,7 +167,7 @@ function displayCurrentUserQuestion() {
         title: question.title || 'Untitled Question',
         description: question.description || '',
         nominees: Array.isArray(question.nominees) ? question.nominees : [],
-        userVote: currentVote
+        userVote: currentVote ? currentVote.toString() : null
     };
     
     console.log('Question Processing:', JSON.stringify({
@@ -189,11 +189,11 @@ function displayCurrentUserQuestion() {
             
             <div class="nominees-grid">
                 ${safeQuestion.nominees.map(nominee => {
-                    const nomineeId = nominee._id || nominee.id;
+                    const nomineeId = (nominee._id || nominee.id).toString();
                     const nomineeName = nominee.name || 'Unknown';
                     
                     // Check if this nominee was voted for
-                    const isVoted = safeQuestion.userVote && nomineeId.toString() === safeQuestion.userVote.toString();
+                    const isVoted = safeQuestion.userVote && nomineeId === safeQuestion.userVote;
                     
                     console.log(`Nominee "${nomineeName}" Details:`, {
                         nomineeId,
