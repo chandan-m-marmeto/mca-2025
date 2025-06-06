@@ -134,7 +134,7 @@ function displayErrorState() {
 }
 
 function displayCurrentUserQuestion() {
-    console.log('Displaying current question...');
+    console.log('\n=== Displaying Question ===');
     const question = currentQuestions[currentQuestionIndex];
     const questionsContainer = document.getElementById('votingQuestions') || document.getElementById('userQuestions');
     
@@ -146,8 +146,9 @@ function displayCurrentUserQuestion() {
     const questionId = question.id || question._id;
     const currentVote = question.userVote || userVotes[questionId];
 
-    console.log('Current question vote details:', {
-        questionId,
+    console.log('Question Vote Details:', {
+        questionId: questionId,
+        title: question.title,
         userVoteFromQuestion: question.userVote,
         userVoteFromStore: userVotes[questionId],
         finalVoteUsed: currentVote
@@ -162,13 +163,13 @@ function displayCurrentUserQuestion() {
         userVote: currentVote
     };
     
-    console.log('Processing question:', {
+    console.log('Question Processing:', JSON.stringify({
         questionId: safeQuestion.id,
         title: safeQuestion.title,
         hasUserVoted: !!safeQuestion.userVote,
         votedFor: safeQuestion.userVote,
         numberOfNominees: safeQuestion.nominees.length
-    });
+    }, null, 2));
 
     questionsContainer.innerHTML = `
         <div class="question-container">
@@ -183,19 +184,20 @@ function displayCurrentUserQuestion() {
                 ${safeQuestion.nominees.map(nominee => {
                     const nomineeId = nominee.id || nominee._id;
                     const nomineeName = nominee.name || 'Unknown';
-                    const isVoted = safeQuestion.userVote && nomineeId === safeQuestion.userVote;
+                    const isVoted = safeQuestion.userVote && (nomineeId === safeQuestion.userVote);
                     
-                    console.log(`Nominee ${nomineeName}:`, {
-                        nomineeId,
-                        isVoted,
+                    console.log(`Nominee "${nomineeName}" Details:`, JSON.stringify({
+                        nomineeId: nomineeId,
+                        isVoted: isVoted,
                         isClickable: !safeQuestion.userVote,
                         userVote: safeQuestion.userVote,
                         comparison: {
-                            nomineeId,
+                            nomineeId: nomineeId,
                             userVote: safeQuestion.userVote,
-                            matches: nomineeId === safeQuestion.userVote
+                            matches: nomineeId === safeQuestion.userVote,
+                            exactComparison: `${nomineeId} === ${safeQuestion.userVote}`
                         }
-                    });
+                    }, null, 2));
                     
                     const cardClasses = [
                         'nominee-card',
@@ -206,6 +208,7 @@ function displayCurrentUserQuestion() {
                     return `
                         <div class="${cardClasses}" 
                              data-nominee-id="${nomineeId}"
+                             data-voted="${isVoted}"
                              onclick="${safeQuestion.userVote ? '' : `selectNominee('${safeQuestion.id}', '${nomineeId}')`}">
                             <div class="nominee-avatar">
                                 <div class="nominee-initial-avatar">${(nominee.name || 'U').charAt(0).toUpperCase()}</div>
@@ -250,7 +253,15 @@ function displayCurrentUserQuestion() {
         </div>
     `;
     
-    console.log('Question display updated');
+    // Double check the selected state after rendering
+    const selectedNominee = document.querySelector('.nominee-card.selected');
+    console.log('Selected nominee after render:', selectedNominee ? {
+        id: selectedNominee.dataset.nomineeId,
+        voted: selectedNominee.dataset.voted,
+        classes: selectedNominee.className
+    } : 'None');
+    
+    console.log('=== Question Display Updated ===\n');
 }
 
 function selectNominee(questionId, nomineeId) {
