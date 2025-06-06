@@ -42,10 +42,13 @@ async function loadUserQuestions() {
             
             // Pre-populate userVotes object with existing votes
             userVotes = {};
+            
+            // Map existing votes from the questions response
             currentQuestions.forEach(question => {
+                const questionId = question.id || question._id;
                 if (question.userVote) {
-                    console.log(`Found existing vote for question ${question.id || question._id}:`, question.userVote);
-                    userVotes[question.id || question._id] = question.userVote;
+                    console.log(`Found vote for question ${questionId}:`, question.userVote);
+                    userVotes[questionId] = question.userVote;
                 }
             });
             
