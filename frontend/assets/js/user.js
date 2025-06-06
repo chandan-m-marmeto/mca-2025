@@ -23,8 +23,28 @@ async function loadUserQuestions() {
             hideLoading();
             return;
         }
+
+        // First fetch existing votes
+        console.log('Fetching existing votes...');
+        const votesResponse = await fetch(`${MCA.baseURL}/vote/user-votes`, {
+            headers: { 'Authorization': `Bearer ${MCA.token}` }
+        });
         
-        // If voting is active, load questions
+        if (votesResponse.ok) {
+            const votesData = await votesResponse.json();
+            console.log('Existing votes:', votesData);
+            
+            // Initialize userVotes from the dedicated votes endpoint
+            userVotes = {};
+            if (votesData.votes) {
+                votesData.votes.forEach(vote => {
+                    userVotes[vote.questionId] = vote.nomineeId.toString();
+                });
+            }
+            console.log('Initialized user votes:', userVotes);
+        }
+        
+        // Then fetch questions
         console.log('Fetching questions from server...');
         const response = await fetch(`${MCA.baseURL}/vote/questions`, {
             headers: { 'Authorization': `Bearer ${MCA.token}` }
@@ -40,17 +60,16 @@ async function loadUserQuestions() {
             
             console.log(`Loaded ${currentQuestions.length} questions`);
             
-            // Pre-populate userVotes object with existing votes
-            userVotes = {};
-            
-            // Map existing votes from the questions response
+            // Update userVotes with any additional votes from questions response
             currentQuestions.forEach(question => {
                 const questionId = question.id || question._id;
                 if (question.userVote) {
-                    console.log(`Found vote for question ${questionId}:`, question.userVote);
+                    console.log(`Found vote in question ${questionId}:`, question.userVote);
                     userVotes[questionId] = question.userVote.toString();
                 }
             });
+            
+            console.log('Final user votes after merging:', userVotes);
             
             if (currentQuestions.length > 0) {
                 displayCurrentUserQuestion();
@@ -310,6 +329,16 @@ async function submitCurrentVote() {
     const questionId = question.id || question._id;
     const selectedNomineeId = userVotes[questionId];
     
+    // Check if already voted
+    if (question.userVote || userVotes[questionId]) {
+        console.log('Already voted for this question:', {
+            questionId,
+            existingVote: question.userVote || userVotes[questionId]
+        });
+        showToast('You have already voted for this question', 'error');
+        return;
+    }
+    
     if (!selectedNomineeId) {
         showToast('Please select a nominee first', 'error');
         return;
@@ -329,9 +358,12 @@ async function submitCurrentVote() {
             })
         });
         
+        const data = await response.json();
+        
         if (response.ok) {
             // Update the current question's userVote
             question.userVote = selectedNomineeId;
+            userVotes[questionId] = selectedNomineeId;
             
             // Trigger celebration background effect
             if (window.userBackground) {
@@ -341,20 +373,15 @@ async function submitCurrentVote() {
             showToast('Vote submitted successfully!', 'success');
             
             // Update the UI
-            const submitBtn = document.getElementById('submitVoteBtn');
-            if (submitBtn) {
-                submitBtn.innerHTML = 'Vote Submitted';
-                submitBtn.classList.add('disabled');
-                submitBtn.disabled = true;
-            }
-            
-            // Add voted class to all nominee cards
-            document.querySelectorAll('.nominee-card').forEach(card => {
-                card.classList.add('voted');
-            });
+            displayCurrentUserQuestion();
             
         } else {
-            const data = await response.json();
+            // If server says already voted, update our local state
+            if (data.error && data.error.toLowerCase().includes('already voted')) {
+                question.userVote = selectedNomineeId;
+                userVotes[questionId] = selectedNomineeId;
+                displayCurrentUserQuestion();
+            }
             showToast(data.error || 'Failed to submit vote', 'error');
         }
     } catch (error) {
