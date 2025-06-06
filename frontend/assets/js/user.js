@@ -143,13 +143,23 @@ function displayCurrentUserQuestion() {
         return;
     }
 
+    const questionId = question.id || question._id;
+    const currentVote = question.userVote || userVotes[questionId];
+
+    console.log('Current question vote details:', {
+        questionId,
+        userVoteFromQuestion: question.userVote,
+        userVoteFromStore: userVotes[questionId],
+        finalVoteUsed: currentVote
+    });
+
     // Safe access to question properties
     const safeQuestion = {
-        id: question.id || question._id,
+        id: questionId,
         title: question.title || 'Untitled Question',
         description: question.description || '',
         nominees: Array.isArray(question.nominees) ? question.nominees : [],
-        userVote: question.userVote || userVotes[question.id || question._id] || null
+        userVote: currentVote
     };
     
     console.log('Processing question:', {
@@ -173,13 +183,18 @@ function displayCurrentUserQuestion() {
                 ${safeQuestion.nominees.map(nominee => {
                     const nomineeId = nominee.id || nominee._id;
                     const nomineeName = nominee.name || 'Unknown';
-                    const isVoted = safeQuestion.userVote === nomineeId;
+                    const isVoted = safeQuestion.userVote && nomineeId === safeQuestion.userVote;
                     
                     console.log(`Nominee ${nomineeName}:`, {
-                        id: nomineeId,
-                        isVoted: isVoted,
+                        nomineeId,
+                        isVoted,
                         isClickable: !safeQuestion.userVote,
-                        userVote: safeQuestion.userVote
+                        userVote: safeQuestion.userVote,
+                        comparison: {
+                            nomineeId,
+                            userVote: safeQuestion.userVote,
+                            matches: nomineeId === safeQuestion.userVote
+                        }
                     });
                     
                     const cardClasses = [
