@@ -187,20 +187,23 @@ function displayCurrentUserQuestion() {
                 ${safeQuestion.nominees.map(nominee => {
                     const nomineeId = nominee.id || nominee._id;
                     const nomineeName = nominee.name || 'Unknown';
-                    const isVoted = safeQuestion.userVote && (nomineeId === safeQuestion.userVote);
                     
-                    console.log(`Nominee "${nomineeName}" Details:`, JSON.stringify({
-                        nomineeId: nomineeId,
-                        isVoted: isVoted,
-                        isClickable: !safeQuestion.userVote,
+                    // Check if this nominee was voted for by comparing IDs
+                    const isVoted = safeQuestion.userVote && 
+                        (nomineeId === safeQuestion.userVote || 
+                         nominee.oldIds?.includes(safeQuestion.userVote));
+                    
+                    console.log(`Nominee "${nomineeName}" Details:`, {
+                        nomineeId,
+                        isVoted,
                         userVote: safeQuestion.userVote,
+                        oldIds: nominee.oldIds,
                         comparison: {
-                            nomineeId: nomineeId,
+                            nomineeId,
                             userVote: safeQuestion.userVote,
-                            matches: nomineeId === safeQuestion.userVote,
-                            exactComparison: `${nomineeId} === ${safeQuestion.userVote}`
+                            matches: isVoted
                         }
-                    }, null, 2));
+                    });
                     
                     const cardClasses = [
                         'nominee-card',
@@ -214,7 +217,7 @@ function displayCurrentUserQuestion() {
                              data-voted="${isVoted}"
                              onclick="${safeQuestion.userVote ? '' : `selectNominee('${safeQuestion.id}', '${nomineeId}')`}">
                             <div class="nominee-avatar">
-                                <div class="nominee-initial-avatar">${(nominee.name || 'U').charAt(0).toUpperCase()}</div>
+                                <div class="nominee-initial-avatar">${(nomineeName || 'U').charAt(0).toUpperCase()}</div>
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>

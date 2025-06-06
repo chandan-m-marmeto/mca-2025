@@ -33,7 +33,10 @@ router.get('/questions', async (req, res) => {
         
         // If voting is active, return all questions
         const questions = await Question.find()
-            .populate('nominees')
+            .populate({
+                path: 'nominees',
+                select: '_id id name department votes oldIds'
+            })
             .sort({ createdAt: -1 });
         
         console.log(`Found ${questions.length} questions in database`);
@@ -47,12 +50,27 @@ router.get('/questions', async (req, res) => {
         const questionsWithVotes = questions.map(question => {
             const vote = votingHistory.find(v => v.questionId.toString() === question._id.toString());
             const questionObj = question.toObject();
+            
+            // Add vote information
             questionObj.userVote = vote ? vote.votedFor : null;
+            
+            // Ensure nominees have oldIds array
+            if (questionObj.nominees) {
+                questionObj.nominees = questionObj.nominees.map(nominee => ({
+                    ...nominee,
+                    oldIds: nominee.oldIds || []
+                }));
+            }
             
             console.log(`Question ${question._id}:`, {
                 title: question.title,
                 hasUserVoted: !!vote,
-                votedFor: vote ? vote.votedFor : 'none'
+                votedFor: vote ? vote.votedFor : 'none',
+                nominees: questionObj.nominees.map(n => ({
+                    id: n._id,
+                    name: n.name,
+                    oldIds: n.oldIds
+                }))
             });
             
             return questionObj;
