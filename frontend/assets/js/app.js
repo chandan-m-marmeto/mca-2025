@@ -1857,3 +1857,157 @@ function handleNewQuestionClick(e) {
         showToast('Error opening question form', 'error');
     }
 }
+
+async function loadAnalytics() {
+    try {
+        showLoading();
+        const response = await fetch(`${MCA.baseURL}/admin/results`, {
+            headers: { 'Authorization': `Bearer ${MCA.token}` }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load analytics');
+        }
+
+        const data = await response.json();
+        const analyticsContainer = document.getElementById('analyticsSection');
+
+        if (!analyticsContainer) {
+            console.error('Analytics container not found');
+            return;
+        }
+
+        // Calculate winning nominees and percentages
+        const questionsWithWinners = data.questions.map(question => {
+            const totalVotes = question.nominees.reduce((sum, nominee) => sum + (nominee.votes || 0), 0);
+            const sortedNominees = [...question.nominees].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+            const winner = sortedNominees[0];
+            const winningPercentage = totalVotes > 0 ? ((winner.votes || 0) / totalVotes * 100).toFixed(1) : 0;
+
+            return {
+                questionId: question._id,
+                title: question.title,
+                winner: winner.name,
+                winningVotes: winner.votes || 0,
+                winningPercentage,
+                totalVotes,
+                allNominees: sortedNominees.map(n => ({
+                    name: n.name,
+                    votes: n.votes || 0,
+                    percentage: totalVotes > 0 ? ((n.votes || 0) / totalVotes * 100).toFixed(1) : 0
+                }))
+            };
+        });
+
+        analyticsContainer.innerHTML = `
+            <div class="analytics-dashboard">
+                <div class="analytics-header">
+                    <h2>Current Results Overview</h2>
+                    <button class="btn btn-primary" onclick="exportResults()">
+                        <i class="fas fa-download"></i> Export Results
+                    </button>
+                </div>
+
+                <div class="results-list">
+                    ${questionsWithWinners.map(q => `
+                        <div class="result-card">
+                            <div class="result-header">
+                                <h3>${q.title}</h3>
+                                <div class="total-votes">
+                                    Total Votes: ${q.totalVotes}
+                                </div>
+                            </div>
+                            
+                            <div class="nominees-results">
+                                ${q.allNominees.map((nominee, index) => `
+                                    <div class="nominee-result ${index === 0 ? 'winner' : ''}">
+                                        <div class="nominee-info">
+                                            <div class="nominee-name">
+                                                ${nominee.name}
+                                                ${index === 0 ? '<span class="winner-badge">Leading</span>' : ''}
+                                            </div>
+                                            <div class="vote-stats">
+                                                <span class="vote-count">${nominee.votes} votes</span>
+                                                <span class="vote-percentage">${nominee.percentage}%</span>
+                                            </div>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: ${nominee.percentage}%"></div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+        showToast('Error loading analytics data', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function exportResults() {
+    try {
+        showLoading();
+        const response = await fetch(`${MCA.baseURL}/admin/results`, {
+            headers: { 'Authorization': `Bearer ${MCA.token}` }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch results for export');
+        }
+
+        const data = await response.json();
+        
+        // Process data for export
+        const exportData = data.questions.map(question => {
+            const totalVotes = question.nominees.reduce((sum, nominee) => sum + (nominee.votes || 0), 0);
+            const sortedNominees = [...question.nominees].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+            const winner = sortedNominees[0];
+            
+            return {
+                'Question': question.title,
+                'Winner': winner.name,
+                'Winning Votes': winner.votes || 0,
+                'Winning Percentage': totalVotes > 0 ? ((winner.votes || 0) / totalVotes * 100).toFixed(1) + '%' : '0%',
+                'Total Votes': totalVotes,
+                'All Nominees Results': sortedNominees.map(n => 
+                    `${n.name}: ${n.votes || 0} votes (${totalVotes > 0 ? ((n.votes || 0) / totalVotes * 100).toFixed(1) : 0}%)`
+                ).join(' | ')
+            };
+        });
+
+        // Convert to CSV
+        const headers = Object.keys(exportData[0]);
+        const csvContent = [
+            headers.join(','),
+            ...exportData.map(row => 
+                headers.map(header => 
+                    JSON.stringify(row[header] || '')
+                ).join(',')
+            )
+        ].join('\n');
+
+        // Create and trigger download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `mca_results_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast('Results exported successfully!', 'success');
+    } catch (error) {
+        console.error('Error exporting results:', error);
+        showToast('Error exporting results', 'error');
+    } finally {
+        hideLoading();
+    }
+}
