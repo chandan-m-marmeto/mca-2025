@@ -121,17 +121,30 @@ async function exportResults() {
     try {
         showLoading();
         
-        const response = await fetch(`${MCA.baseURL}/admin/export`, {
+        const response = await fetch(`${MCA.baseURL}/admin/export-results`, {
             headers: { 'Authorization': `Bearer ${MCA.token}` }
         });
         
-        if (!response.ok) throw new Error('Export failed');
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Export failed');
+        }
         
+        // Get the filename from the Content-Disposition header if available
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = 'mca2025-results.csv';
+        if (contentDisposition) {
+            const matches = /filename=(.+)/.exec(contentDisposition);
+            if (matches?.length === 2) {
+                filename = matches[1];
+            }
+        }
+
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `mca2025-results-${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -140,7 +153,7 @@ async function exportResults() {
         showToast('Results exported successfully!', 'success');
     } catch (error) {
         console.error('Export error:', error);
-        showToast('Failed to export results', 'error');
+        showToast('Failed to export results: ' + error.message, 'error');
     } finally {
         hideLoading();
     }

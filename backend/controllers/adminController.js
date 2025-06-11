@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import { fileURLToPath } from 'url';
 import { uploadToS3, deleteFromS3 } from '../config/s3.js';
 import VotingSession from '../models/VotingSession.js';
+import { Parser } from 'json2csv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -717,6 +718,72 @@ export const activateAllQuestions = async (req, res) => {
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to activate questions'
+        });
+    }
+};
+
+export const getExportResults = async (req, res) => {
+    try {
+        // Get all questions with their nominees
+        const questions = await Question.find()
+            .populate('nominees')
+            .sort('-createdAt');
+
+        // Prepare data for CSV
+        const csvData = [];
+        
+        questions.forEach(question => {
+            // Calculate total votes for this question
+            const totalVotes = question.nominees.reduce((sum, n) => sum + (n.votes || 0), 0);
+            
+            // Sort nominees by votes
+            const sortedNominees = [...question.nominees].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+            const winner = sortedNominees[0];
+            
+            // Add question data to CSV
+            csvData.push({
+                'Question Title': question.title,
+                'Question Description': question.description,
+                'Total Votes': totalVotes,
+                'Winner Name': winner?.name || 'No votes',
+                'Winner Votes': winner?.votes || 0,
+                'Winner Percentage': totalVotes > 0 ? ((winner.votes / totalVotes) * 100).toFixed(1) + '%' : '0%',
+                'Status': question.isActive ? 'Active' : 'Inactive',
+                'All Nominees Results': sortedNominees.map(n => 
+                    `${n.name}: ${n.votes} votes (${
+                        totalVotes > 0 ? ((n.votes / totalVotes) * 100).toFixed(1) : 0
+                    }%)`
+                ).join(' | ')
+            });
+        });
+
+        // Convert to CSV
+        const fields = [
+            'Question Title',
+            'Question Description',
+            'Total Votes',
+            'Winner Name',
+            'Winner Votes',
+            'Winner Percentage',
+            'Status',
+            'All Nominees Results'
+        ];
+
+        const json2csvParser = new Parser({ fields });
+        const csv = json2csvParser.parse(csvData);
+
+        // Set headers for file download
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename=mca2025-results-${new Date().toISOString().split('T')[0]}.csv`);
+
+        // Send CSV
+        res.send(csv);
+
+    } catch (error) {
+        console.error('Export results error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Failed to export results'
         });
     }
 };

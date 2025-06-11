@@ -10,7 +10,8 @@ import {
     startVotingSession,
     endVotingSession,
     getVotingSessionStatus,
-    activateAllQuestions
+    activateAllQuestions,
+    getExportResults
 } from '../controllers/adminController.js';
 import { authenticateToken, isAdmin } from '../middleware/auth.js';
 
@@ -35,5 +36,6 @@ router.post('/questions/activate-all', activateAllQuestions);
 router.get('/results', getResults);
 router.get('/statistics', getStatistics);
 router.post('/nominees/:nomineeId/image', tempUpload.single('image'), uploadNomineeImage);
+router.get('/export-results', getExportResults);
 
 export default router; 
