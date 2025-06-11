@@ -1,8 +1,6 @@
 /* Analytics Dashboard Styles */
 .analytics-dashboard {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
+    padding: 20px;
 }
 
 /* Import Lato font for consistency */
@@ -710,4 +708,94 @@ h1, h2, h3, h4, h5, h6,
 
 .progress-fill {
     animation: fillProgress 1s ease-out forwards;
+}
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.question-result-card {
+    background: #1a1a1a;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.winner-section {
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.winner-badge {
+    color: gold;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.winner-details {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.winner-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 25px;
+    overflow: hidden;
+}
+
+.winner-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.winner-initial {
+    width: 100%;
+    height: 100%;
+    background: #4f46e5;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.nominees-list {
+    margin-top: 20px;
+}
+
+.nominee-result {
+    display: grid;
+    grid-template-columns: 40px 1fr 200px 60px;
+    align-items: center;
+    gap: 15px;
+    padding: 10px 0;
+}
+
+.vote-bar {
+    background: rgba(255, 255, 255, 0.1);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.vote-fill {
+    background: #4f46e5;
+    height: 100%;
+    transition: width 0.3s ease;
 }

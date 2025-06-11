@@ -7,26 +7,124 @@ async function loadAnalytics() {
     try {
         showLoading();
         
-        // Get dashboard analytics
-        const [dashboardData, realTimeData] = await Promise.all([
-            fetch(`${MCA.baseURL}/analytics/dashboard?range=7d`, {
-                headers: { 'Authorization': `Bearer ${MCA.token}` }
-            }).then(res => res.json()),
-            fetch(`${MCA.baseURL}/analytics/realtime`, {
-                headers: { 'Authorization': `Bearer ${MCA.token}` }
-            }).then(res => res.json())
-        ]);
+        // Get questions with results
+        const response = await fetch(`${MCA.baseURL}/questions/results`, {
+            headers: { 'Authorization': `Bearer ${MCA.token}` }
+        });
+        const data = await response.json();
 
-        if (dashboardData.success) {
-            renderAnalyticsDashboard(dashboardData.data, realTimeData.data);
+        if (data.success) {
+            renderSimpleAnalytics(data.questions);
         } else {
-            throw new Error(dashboardData.error || 'Failed to load analytics');
+            throw new Error(data.error || 'Failed to load results');
         }
-
     } catch (error) {
         console.error('Analytics loading error:', error);
-        showToast('Failed to load analytics', 'error');
-        renderErrorState();
+        showToast('Failed to load results', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+function renderSimpleAnalytics(questions) {
+    const container = document.getElementById('analyticsContent');
+    
+    container.innerHTML = `
+        <div class="analytics-dashboard">
+            <div class="results-header">
+                <h2>Questions Results</h2>
+                <button onclick="exportResults()" class="btn btn-primary">
+                    <span>📊</span> Export Results
+                </button>
+            </div>
+            
+            <div class="questions-results">
+                ${questions.map(question => {
+                    // Calculate total votes
+                    const totalVotes = question.nominees.reduce((sum, n) => sum + (n.votes || 0), 0);
+                    
+                    // Sort nominees by votes and get winner
+                    const sortedNominees = [...question.nominees].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+                    const winner = sortedNominees[0];
+                    
+                    return `
+                        <div class="question-result-card">
+                            <div class="question-header">
+                                <h3>${question.title}</h3>
+                                <span class="total-votes">Total Votes: ${totalVotes}</span>
+                            </div>
+                            
+                            <div class="winner-section">
+                                <div class="winner-badge">🏆 Winner</div>
+                                <div class="winner-details">
+                                    <div class="winner-avatar">
+                                        ${winner.image ? 
+                                            `<img src="${winner.image}" alt="${winner.name}" 
+                                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                             <div class="winner-initial" style="display:none;">
+                                                 ${winner.name.charAt(0).toUpperCase()}
+                                             </div>` :
+                                            `<div class="winner-initial">
+                                                ${winner.name.charAt(0).toUpperCase()}
+                                             </div>`
+                                        }
+                                    </div>
+                                    <div class="winner-name">${winner.name}</div>
+                                    <div class="winner-votes">
+                                        ${winner.votes} votes 
+                                        (${totalVotes > 0 ? ((winner.votes / totalVotes) * 100).toFixed(1) : 0}%)
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="nominees-list">
+                                ${sortedNominees.map((nominee, index) => `
+                                    <div class="nominee-result">
+                                        <span class="nominee-rank">#${index + 1}</span>
+                                        <span class="nominee-name">${nominee.name}</span>
+                                        <div class="vote-bar">
+                                            <div class="vote-fill" style="width: ${
+                                                totalVotes > 0 ? ((nominee.votes / totalVotes) * 100) : 0
+                                            }%"></div>
+                                        </div>
+                                        <span class="vote-percentage">
+                                            ${totalVotes > 0 ? ((nominee.votes / totalVotes) * 100).toFixed(1) : 0}%
+                                        </span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+async function exportResults() {
+    try {
+        showLoading();
+        
+        const response = await fetch(`${MCA.baseURL}/questions/export`, {
+            headers: { 'Authorization': `Bearer ${MCA.token}` }
+        });
+        
+        if (!response.ok) throw new Error('Export failed');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mca2025-results-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showToast('Results exported successfully!', 'success');
+    } catch (error) {
+        console.error('Export error:', error);
+        showToast('Failed to export results', 'error');
     } finally {
         hideLoading();
     }
