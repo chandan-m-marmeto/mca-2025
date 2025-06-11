@@ -624,6 +624,18 @@ export const uploadNomineeImage = async (req, res) => {
     try {
         const { nomineeId } = req.params;
         
+        console.log('📥 Upload nominee image request:', {
+            nomineeId,
+            hasFile: !!req.file,
+            fileDetails: req.file ? {
+                fieldname: req.file.fieldname,
+                originalname: req.file.originalname,
+                mimetype: req.file.mimetype,
+                size: req.file.size,
+                path: req.file.path
+            } : null
+        });
+
         if (!req.file) {
             return res.status(400).json({ success: false, error: 'No image file provided' });
         }
@@ -632,34 +644,61 @@ export const uploadNomineeImage = async (req, res) => {
         const timestamp = Date.now();
         const s3Key = `nominees/nominee-${nomineeId}-${timestamp}.${req.file.originalname.split('.').pop()}`;
 
-        // Upload to S3
-        const imageUrl = await uploadToS3(req.file, s3Key);
+        console.log('🔑 Generated S3 key:', s3Key);
 
-        // Update nominee with new image URL
-        const nominee = await Nominee.findById(nomineeId);
-        if (!nominee) {
-            return res.status(404).json({ success: false, error: 'Nominee not found' });
+        try {
+            // Upload to S3
+            const imageUrl = await uploadToS3(req.file, s3Key);
+            console.log('✅ Image uploaded to S3:', imageUrl);
+
+            // Update nominee with new image URL
+            const nominee = await Nominee.findById(nomineeId);
+            if (!nominee) {
+                return res.status(404).json({ success: false, error: 'Nominee not found' });
+            }
+
+            // Delete old image if exists
+            if (nominee.image) {
+                const oldKey = nominee.image.split('/').pop();
+                try {
+                    await deleteFromS3(`nominees/${oldKey}`);
+                    console.log('✅ Old image deleted from S3:', oldKey);
+                } catch (deleteError) {
+                    console.error('⚠️ Error deleting old image:', deleteError);
+                    // Continue with the update even if delete fails
+                }
+            }
+
+            // Update nominee with new image URL
+            nominee.image = imageUrl;
+            nominee.imageProcessed = true;
+            await nominee.save();
+            console.log('✅ Nominee updated with new image URL');
+
+            res.json({ 
+                success: true, 
+                message: 'Image uploaded successfully',
+                imageUrl: imageUrl
+            });
+        } catch (uploadError) {
+            console.error('❌ Error during S3 upload or nominee update:', uploadError);
+            throw uploadError; // Re-throw to be caught by outer catch
         }
-
-        // Delete old image if exists
-        if (nominee.image) {
-            const oldKey = nominee.image.split('/').pop();
-            await deleteFromS3(`nominees/${oldKey}`);
-        }
-
-        // Update nominee with new image URL
-        nominee.image = imageUrl;
-        nominee.imageProcessed = true;
-        await nominee.save();
-
-        res.json({ 
-            success: true, 
-            message: 'Image uploaded successfully',
-            imageUrl: imageUrl
-        });
     } catch (error) {
-        console.error('Error uploading nominee image:', error);
-        res.status(500).json({ success: false, error: 'Failed to upload image' });
+        console.error('❌ Error uploading nominee image:', error);
+        // Clean up the temp file if it exists
+        if (req.file && req.file.path) {
+            try {
+                fs.unlinkSync(req.file.path);
+                console.log('✅ Cleaned up temp file:', req.file.path);
+            } catch (cleanupError) {
+                console.error('⚠️ Error cleaning up temp file:', cleanupError);
+            }
+        }
+        res.status(500).json({ 
+            success: false, 
+            error: 'Failed to upload image: ' + error.message 
+        });
     }
 };
 
