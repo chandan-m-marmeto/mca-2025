@@ -84,7 +84,6 @@ export const uploadToS3 = async (file, key) => {
             Key: key,
             Body: fileBuffer,
             ContentType: file.mimetype,
-            ACL: 'public-read'
         };
 
         console.log('📤 Uploading to S3 with params:', {
