@@ -29,9 +29,10 @@ function initializeApp() {
         MCA.baseURL = 'http://localhost:3000/api';
         MCA.staticURL = 'http://localhost:3000';
     } else {
-        // Production - use same domain
+        // Production - only need baseURL for API calls
         MCA.baseURL = `${window.location.protocol}//${window.location.host}/api`;
-        MCA.staticURL = `${window.location.protocol}//${window.location.host}`;
+        // Don't need staticURL since images come directly from S3
+        MCA.staticURL = '';
     }
     
     console.log('Environment:', isDevelopment ? 'Development' : 'Production');
@@ -1309,12 +1310,8 @@ function showResultsModal(question) {
         if (!imagePath || imagePath === null) {
             return null; // Return null for initial avatar
         }
-        // If it's already a full URL (like S3), return as is
-        if (imagePath.startsWith('http')) {
-            return imagePath;
-        }
-        // Otherwise, prepend the static URL
-        return `${MCA.staticURL}${imagePath}`;
+        // Just return the URL as-is from the database
+        return imagePath;
     };
 
     // Get status info
