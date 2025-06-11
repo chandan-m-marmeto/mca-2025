@@ -104,36 +104,6 @@ function displayNoQuestionsState() {
                         </button>
                     </div>
                 </div>
-
-                <div class="mca-memories">
-                    <div class="memories-header">
-                        <h2>🏆 MCA Memories</h2>
-                        <p>While we prepare for MCA 2025, take a look at some highlights from previous years!</p>
-                    </div>
-                    <div class="memories-gallery">
-                        <div class="memory-card">
-                            <div class="memory-image">
-                                <div class="placeholder-image">🎉</div>
-                            </div>
-                            <h3>MCA 2024 Winners</h3>
-                            <p>Celebrating our amazing team achievements</p>
-                        </div>
-                        <div class="memory-card">
-                            <div class="memory-image">
-                                <div class="placeholder-image">🏅</div>
-                            </div>
-                            <h3>Best Innovation</h3>
-                            <p>Recognizing groundbreaking solutions</p>
-                        </div>
-                        <div class="memory-card">
-                            <div class="memory-image">
-                                <div class="placeholder-image">👥</div>
-                            </div>
-                            <h3>Team Spirit</h3>
-                            <p>Honoring collaboration and teamwork</p>
-                        </div>
-                    </div>
-                </div>
             </div>
         `;
     }
