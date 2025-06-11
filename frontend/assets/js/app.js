@@ -1309,6 +1309,11 @@ function showResultsModal(question) {
         if (!imagePath || imagePath === null) {
             return null; // Return null for initial avatar
         }
+        // If it's already a full URL (like S3), return as is
+        if (imagePath.startsWith('http')) {
+            return imagePath;
+        }
+        // Otherwise, prepend the static URL
         return `${MCA.staticURL}${imagePath}`;
     };
 
