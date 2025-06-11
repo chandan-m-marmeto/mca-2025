@@ -1,4 +1,5 @@
 import AWS from 'aws-sdk';
+import fs from 'fs';
 
 // S3 Configuration
 const s3Config = {
@@ -18,10 +19,23 @@ const s3 = new AWS.S3({
 // Upload file to S3
 export const uploadToS3 = async (file, key) => {
     try {
+        let fileBuffer;
+        
+        // If file is a buffer, use it directly
+        if (file.buffer) {
+            fileBuffer = file.buffer;
+        } 
+        // If file has a path, read it into a buffer
+        else if (file.path) {
+            fileBuffer = await fs.promises.readFile(file.path);
+        } else {
+            throw new Error('File must have either buffer or path property');
+        }
+
         const params = {
             Bucket: s3Config.bucket,
             Key: key,
-            Body: file.buffer,
+            Body: fileBuffer,
             ContentType: file.mimetype,
             ACL: 'public-read'
         };
