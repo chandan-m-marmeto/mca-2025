@@ -7,20 +7,27 @@ async function loadAnalytics() {
     try {
         showLoading();
         
-        // Get questions with results
-        const response = await fetch(`${MCA.baseURL}/questions/results`, {
+        // Use the existing admin results endpoint
+        const response = await fetch(`${MCA.baseURL}/admin/results`, {
             headers: { 'Authorization': `Bearer ${MCA.token}` }
         });
+        
         const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to load results');
+        }
 
         if (data.success) {
-            renderSimpleAnalytics(data.questions);
+            renderSimpleAnalytics(data.data);
         } else {
             throw new Error(data.error || 'Failed to load results');
         }
+
     } catch (error) {
         console.error('Analytics loading error:', error);
         showToast('Failed to load results', 'error');
+        renderErrorState();
     } finally {
         hideLoading();
     }
@@ -40,10 +47,8 @@ function renderSimpleAnalytics(questions) {
             
             <div class="questions-results">
                 ${questions.map(question => {
-                    // Calculate total votes
+                    // Calculate total votes and sort nominees
                     const totalVotes = question.nominees.reduce((sum, n) => sum + (n.votes || 0), 0);
-                    
-                    // Sort nominees by votes and get winner
                     const sortedNominees = [...question.nominees].sort((a, b) => (b.votes || 0) - (a.votes || 0));
                     const winner = sortedNominees[0];
                     
@@ -101,11 +106,22 @@ function renderSimpleAnalytics(questions) {
     `;
 }
 
+function renderErrorState() {
+    const container = document.getElementById('analyticsContent');
+    container.innerHTML = `
+        <div class="error-state">
+            <h3>😕 Unable to load results</h3>
+            <p>Please try refreshing the page</p>
+        </div>
+    `;
+}
+
+// Export results function
 async function exportResults() {
     try {
         showLoading();
         
-        const response = await fetch(`${MCA.baseURL}/questions/export`, {
+        const response = await fetch(`${MCA.baseURL}/admin/export`, {
             headers: { 'Authorization': `Bearer ${MCA.token}` }
         });
         
@@ -469,18 +485,6 @@ function formatTimeAgo(timestamp) {
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     return `${Math.floor(diff / 86400)}d ago`;
-}
-
-function renderErrorState() {
-    const container = document.getElementById('analyticsContent') || createAnalyticsContainer();
-    container.innerHTML = `
-        <div class="analytics-error">
-            <div class="error-icon">📊</div>
-            <h2>Analytics Unavailable</h2>
-            <p>Unable to load analytics data. Please try again later.</p>
-            <button class="btn btn-primary" onclick="loadAnalytics()">Retry</button>
-        </div>
-    `;
 }
 
 // Cleanup function
