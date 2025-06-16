@@ -801,35 +801,41 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .vote-button-container {
-    width: 100%;
     display: flex;
     justify-content: center;
-    align-items: center;
-    margin: 30px auto;
-    padding: 0 20px;
+    margin: 2rem 0;
 }
 
 .btn-submit-vote {
-    min-width: 200px;
-    padding: 12px 30px;
-    font-size: 16px;
-    transition: all 0.3s ease;
-    text-align: center;
-    border-radius: 8px;
-    background: #4CAF50;
+    background-color: #4CAF50;  /* Green color matching your screenshot */
     color: white;
     border: none;
+    border-radius: 8px;
+    padding: 12px 48px;
+    font-size: 1.1rem;
+    font-weight: 500;
     cursor: pointer;
+    transition: background-color 0.2s ease;
+    width: auto;
+    min-width: 200px;
+    text-align: center;
 }
 
-.btn-submit-vote:hover:not(.disabled) {
-    background: #45a049;
-    transform: translateY(-2px);
+.btn-submit-vote:hover {
+    background-color: #45a049;  /* Slightly darker green for hover */
 }
 
 .btn-submit-vote.disabled {
-    background: #666;
+    background-color: #cccccc;
     cursor: not-allowed;
     opacity: 0.7;
-    pointer-events: none;
+}
+
+/* For better mobile responsiveness */
+@media (max-width: 768px) {
+    .btn-submit-vote {
+        width: 90%;
+        max-width: 300px;
+        padding: 10px 24px;
+    }
 } 

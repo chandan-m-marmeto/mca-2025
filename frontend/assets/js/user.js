@@ -219,7 +219,7 @@ function displayCurrentUserQuestion() {
             </div>
             
             <div class="vote-button-container">
-                <button class="btn btn-primary btn-submit-vote ${safeQuestion.userVote ? 'disabled' : ''}" 
+                <button class="btn btn-submit-vote ${safeQuestion.userVote ? 'disabled' : ''}" 
                         id="submitVoteBtn"
                         onclick="submitCurrentVote()"
                         ${safeQuestion.userVote ? 'disabled' : ''}>
