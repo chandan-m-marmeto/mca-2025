@@ -149,4 +149,44 @@ router.post('/submit', async (req, res) => {
     }
 });
 
+// Add finalize endpoint
+router.post('/finalize', async (req, res) => {
+    try {
+        // Update user's voting status
+        await User.findByIdAndUpdate(req.user._id, {
+            votingFinalized: true,
+            finalizedAt: new Date()
+        });
+
+        res.json({
+            success: true,
+            message: 'Votes finalized successfully'
+        });
+    } catch (error) {
+        console.error('Error finalizing votes:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to finalize votes'
+        });
+    }
+});
+
+// Add endpoint to check voting status
+router.get('/status', async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        res.json({
+            success: true,
+            data: {
+                votingFinalized: user.votingFinalized
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get voting status'
+        });
+    }
+});
+
 export default router; 

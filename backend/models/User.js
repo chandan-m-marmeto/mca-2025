@@ -46,7 +46,14 @@ const userSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
-  }]
+  }],
+  votingFinalized: {
+    type: Boolean,
+    default: false
+  },
+  finalizedAt: {
+    type: Date
+  }
 }, {
   timestamps: true
 });

@@ -6,9 +6,24 @@ let userVotes = {}; // For storing submitted votes
 let allSelectionsComplete = false;
 let finalVoteSubmitted = false;
 
+// Add these functions at the top of the file
+function setFinalVoteSubmitted() {
+    localStorage.setItem('finalVoteSubmitted', 'true');
+}
+
+function isFinalVoteSubmitted() {
+    return localStorage.getItem('finalVoteSubmitted') === 'true';
+}
+
 // Load questions for user voting
 async function loadUserQuestions() {
     try {
+        // Check if final vote was already submitted
+        if (isFinalVoteSubmitted()) {
+            showCongratulationsScreen();
+            return;
+        }
+
         console.log('Starting to load user questions...');
         showLoading();
         
@@ -87,11 +102,6 @@ async function loadUserQuestions() {
             }
         } else {
             throw new Error('Failed to load questions');
-        }
-
-        if (finalVoteSubmitted) {
-            showCongratulationsScreen();
-            return;
         }
     } catch (error) {
         console.error('Error loading user questions:', error);
@@ -348,13 +358,35 @@ function showVoteReviewScreen() {
 
 function editVote(index) {
     currentQuestionIndex = index;
+    // Clear the previous vote from userVotes and move it to userSelections
+    const question = currentQuestions[index];
+    const questionId = question.id || question._id;
+    if (userVotes[questionId]) {
+        userSelections[questionId] = userVotes[questionId];
+        delete userVotes[questionId];
+    }
     displayCurrentUserQuestion();
 }
 
 async function submitFinalVotes() {
     try {
         showLoading();
-        showCongratulationsScreen();
+        
+        // Make API call to mark votes as final (you'll need to add this endpoint)
+        const response = await fetch(`${MCA.baseURL}/vote/finalize`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${MCA.token}`
+            }
+        });
+
+        if (response.ok) {
+            setFinalVoteSubmitted(); // Store final submission state
+            showCongratulationsScreen();
+        } else {
+            throw new Error('Failed to finalize votes');
+        }
     } catch (error) {
         console.error('Error submitting final votes:', error);
         showToast('Error submitting votes', 'error');
@@ -431,4 +463,10 @@ function areAllVotesComplete() {
         const questionId = question.id || question._id;
         return userVotes[questionId];
     });
+}
+
+// Add logout handler to clear final vote state
+function handleLogout() {
+    localStorage.removeItem('finalVoteSubmitted');
+    // Your existing logout code...
 }
