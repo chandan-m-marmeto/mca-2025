@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
 import { validateEmail, validatePassword } from '../utils/validators.js';
+import validEmails from '../config/validEmails.js';
 
 // Register new user
 export const register = async (req, res) => {
@@ -17,7 +18,7 @@ export const register = async (req, res) => {
         // Validate email
         if (!validateEmail(email)) {
             return res.status(400).json({ 
-                error: 'Invalid email format. Must be a valid @marmeto.com email' 
+                error: 'You are not authorized to register. Please use your Marmeto email address.' 
             });
         }
 

@@ -1,9 +1,11 @@
-// Validate email format and domain
+import validEmails from '../config/validEmails.js';
+
+// Validate email against valid email list
 export const validateEmail = (email) => {
     if (!email || typeof email !== 'string') return false;
     
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@marmeto\.com$/;
-    return emailRegex.test(email);
+    // Convert email to lowercase and check if it's in the valid list
+    return validEmails.includes(email.toLowerCase());
 };
 
 // Validate password strength

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import validEmails from '../config/validEmails.js';
 
 // Admin email patterns
 const ADMIN_EMAIL_PATTERNS = [
@@ -20,9 +21,9 @@ const userSchema = new mongoose.Schema({
     unique: true,
     validate: {
       validator: function(v) {
-        return v.endsWith('@marmeto.com') || v.endsWith('@admin.marmeto.com');
+        return validEmails.includes(v.toLowerCase());
       },
-      message: 'Email must be from marmeto.com domain'
+      message: 'You are not authorized to register. Please use your Marmeto email address.'
     }
   },
   password: {
