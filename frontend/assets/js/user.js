@@ -173,15 +173,7 @@ function displayCurrentUserQuestion() {
 
     questionsContainer.innerHTML = `
         <div class="question-container">
-            <div class="voting-timer-container">
-                <div id="votingTimer" class="voting-timer">
-                    <div class="timer-status">
-                        <span class="status-dot active"></span>
-                        <span class="status-text">Voting is ACTIVE</span>
-                    </div>
-                    <div class="time-remaining"></div>
-                </div>
-            </div>
+            <div id="votingTimer" class="voting-timer"></div>
 
             <div class="question-header">
                 <div class="question-content">
@@ -268,43 +260,22 @@ function displayCurrentUserQuestion() {
     // Add timer styles
     const styles = document.createElement('style');
     styles.textContent = `
-        .voting-timer-container {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
         .voting-timer {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .timer-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #ff4444;
-        }
-
-        .status-dot.active {
-            background: #00C853;
-            box-shadow: 0 0 10px rgba(0, 200, 83, 0.5);
-        }
-
-        .time-remaining {
+            position: absolute;
+            top: 20px;
+            right: 20px;
             font-size: 16px;
             font-weight: 500;
             color: #FFD700;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .question-container {
+            position: relative;
+            padding-top: 60px;  /* Make space for the timer */
         }
     `;
     document.head.appendChild(styles);
@@ -447,7 +418,7 @@ function nextUserQuestion() {
 
 function getTimeRemaining(endTime) {
     try {
-        if (!endTime) return 'No time limit';
+        if (!endTime) return '';
         
         const now = new Date();
         const end = new Date(endTime);
@@ -460,15 +431,15 @@ function getTimeRemaining(endTime) {
         const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
         
         if (hours > 0) {
-            return `${hours}h ${minutes}m ${seconds}s remaining`;
+            return `${hours}h ${minutes}m ${seconds}s`;
         } else if (minutes > 0) {
-            return `${minutes}m ${seconds}s remaining`;
+            return `${minutes}m ${seconds}s`;
         } else {
-            return `${seconds}s remaining`;
+            return `${seconds}s`;
         }
     } catch (error) {
         console.error('Error calculating time remaining:', error);
-        return 'Time calculation error';
+        return '';
     }
 }
 
@@ -519,7 +490,6 @@ function showCongratulationsScreen() {
 
 // Add function to start and update the timer
 function startVotingTimer() {
-    // Clear any existing timer
     if (window.votingTimerInterval) {
         clearInterval(window.votingTimerInterval);
     }
@@ -532,11 +502,11 @@ function startVotingTimer() {
             
             if (response.ok) {
                 const data = await response.json();
-                const timeRemainingElement = document.querySelector('.time-remaining');
+                const timerElement = document.getElementById('votingTimer');
                 
-                if (timeRemainingElement && data.data.endTime) {
+                if (timerElement && data.data.endTime) {
                     const timeRemaining = getTimeRemaining(data.data.endTime);
-                    timeRemainingElement.textContent = timeRemaining;
+                    timerElement.textContent = timeRemaining;
 
                     // If voting has ended, refresh the page
                     if (timeRemaining === 'Voting ended') {
