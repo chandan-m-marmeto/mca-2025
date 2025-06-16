@@ -24,19 +24,22 @@ body:has(#user-dashboard:not(.hidden)) {
     margin-bottom: 0;
     background: rgba(16, 103, 173, 0.1);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .user-container .user-logo {
     display: block !important;
-    width: 100px;
-    height: 100px;
+    width: 180px;
+    height: 180px;
     margin: 0 20px;
 }
 
 .user-container .user-logo img {
     display: block !important;
-    width: 100px;
-    height: 100px;
+    width: 180px;
+    height: 180px;
     object-fit: contain;
 }
 
