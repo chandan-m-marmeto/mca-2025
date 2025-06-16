@@ -1,4 +1,5 @@
 const validEmails = [
+    'admin@marmeto.com',
     'ss@marmeto.com',
     'hatprab@marmeto.com',
     'srv@marmeto.com',
