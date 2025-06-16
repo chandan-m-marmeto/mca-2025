@@ -206,7 +206,11 @@ function displayCurrentUserQuestion() {
                                 <div class="nominee-initial-avatar">${(nomineeName || 'U').charAt(0).toUpperCase()}</div>
                             </div>
                             <div class="nominee-info">
-                                <h3 class="nominee-name">${nomineeName}</h3>
+                                ${
+        nominee.image
+        ? `<img src="${nominee.image}" alt="${nomineeName}" class="nominee-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+        : `<div class="nominee-initial-avatar">${(nomineeName || 'U').charAt(0).toUpperCase()}</div>`
+    }
                             </div>
                             ${isVoted ? '<div class="selected-indicator">✓ Your Vote</div>' : ''}
                         </div>
