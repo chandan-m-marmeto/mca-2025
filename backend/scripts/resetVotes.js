@@ -1,28 +1,15 @@
 import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Nominee from '../models/Nominee.js';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-// Get the directory name
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load environment variables from .env file (2 levels up from scripts folder)
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+const MONGODB_URI = 'mongodb://localhost:27017/mca2025';
 
 const resetVotes = async (userEmail) => {
     try {
-        // Log the MongoDB URI (without sensitive info)
         console.log('Attempting to connect to MongoDB...');
         
-        if (!process.env.MONGODB_URI) {
-            throw new Error('MONGODB_URI is not defined in environment variables');
-        }
-
-        // Connect to your database
-        await mongoose.connect(process.env.MONGODB_URI);
+        // Connect to your database with direct URL
+        await mongoose.connect(MONGODB_URI);
         console.log('Successfully connected to MongoDB');
         
         // Find the user and their voting history
@@ -86,8 +73,7 @@ const resetVotes = async (userEmail) => {
     }
 };
 
-// Usage:
-// node resetVotes.js youremail@marmeto.com
+// Get email from command line argument
 const userEmail = process.argv[2];
 if (!userEmail) {
     console.log('Please provide your email as an argument');
