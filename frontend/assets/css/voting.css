@@ -115,7 +115,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 60vh;
+    min-height: 80vh;
     position: relative;
     overflow: hidden;
 }
@@ -124,27 +124,35 @@
     text-align: center;
     position: relative;
     z-index: 2;
-    padding: 2rem;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 16px;
+    padding: 4rem;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 24px;
     backdrop-filter: blur(10px);
+    width: 90%;
+    max-width: 800px;
 }
 
 .success-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
+    font-size: 6rem;
+    margin-bottom: 2rem;
     animation: bounce 1s ease infinite;
 }
 
 .success-content h2 {
     color: #ffffff;
-    font-size: 2rem;
-    margin-bottom: 1rem;
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(45deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .success-content p {
-    color: #cccccc;
-    margin-bottom: 0.5rem;
+    color: #ffffff;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    line-height: 1.6;
 }
 
 /* Confetti Animation */
@@ -169,9 +177,17 @@
 .confetti-left::before,
 .confetti-right::before {
     content: '🎉';
-    font-size: 1.5rem;
+    font-size: 2.5rem;
     position: absolute;
     animation: rotate 1s linear infinite;
+}
+
+.confetti-left::after,
+.confetti-right::after {
+    content: '🎊';
+    font-size: 2.5rem;
+    position: absolute;
+    animation: rotate 1.5s linear infinite reverse;
 }
 
 @keyframes confettiRain {
@@ -223,4 +239,38 @@
     align-items: center;
     gap: 1rem;
     margin: 2rem 0;
+}
+
+.header-title {
+    font-size: 2.5rem;
+    background: linear-gradient(45deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+    font-weight: bold;
+    padding: 1rem 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Increase Marmeto logo size */
+.logo img {
+    width: 120px; /* Adjust this value as needed */
+    height: auto;
+}
+
+/* Add these to voting.css */
+.award-title {
+    font-size: 2rem;
+    font-weight: bold;
+    background: linear-gradient(45deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 1.5rem 0;
+}
+
+.thank-you {
+    font-size: 1.3rem;
+    color: #cccccc !important;
 }

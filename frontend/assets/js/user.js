@@ -291,10 +291,12 @@ async function submitCurrentVote() {
             delete userSelections[questionId];
             showToast('Vote submitted successfully!', 'success');
             
-            if (areAllVotesComplete()) {
+            // If this is the last question and all votes are complete, show review
+            if (currentQuestionIndex === currentQuestions.length - 1 && areAllVotesComplete()) {
                 showVoteReviewScreen();
             } else {
-                displayCurrentUserQuestion();
+                // Automatically move to next question
+                nextUserQuestion();
             }
         } else {
             throw new Error('Failed to submit vote');
@@ -302,7 +304,6 @@ async function submitCurrentVote() {
     } catch (error) {
         console.error('Error submitting vote:', error);
         showToast('Error submitting vote', 'error');
-        displayCurrentUserQuestion();
     } finally {
         hideLoading();
     }
@@ -447,8 +448,9 @@ function showCongratulationsScreen() {
                 <div class="success-content">
                     <div class="success-icon">🎉</div>
                     <h2>Congratulations!</h2>
-                    <p>Your votes have been successfully submitted for MCA 2025.</p>
-                    <p>Thank you for participating!</p>
+                    <p>Your votes have been successfully submitted for</p>
+                    <p class="award-title">Marmetian's Choice Awards 2025</p>
+                    <p class="thank-you">Thank you for participating in shaping our community's future!</p>
                 </div>
             </div>
         </div>
