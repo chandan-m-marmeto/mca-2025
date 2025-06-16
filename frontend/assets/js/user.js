@@ -1,7 +1,8 @@
 // User-specific functionality
 let currentQuestions = [];
 let currentQuestionIndex = 0;
-let userVotes = {};
+let userSelections = {}; // For storing selections before submission
+let userVotes = {}; // For storing submitted votes
 let allSelectionsComplete = false;
 let finalVoteSubmitted = false;
 
@@ -135,7 +136,7 @@ function displayErrorState() {
 function displayCurrentUserQuestion() {
     console.log('\n=== Displaying Question ===');
     const question = currentQuestions[currentQuestionIndex];
-    const questionsContainer = document.getElementById('votingQuestions') || document.getElementById('userQuestions');
+    const questionsContainer = document.getElementById('votingQuestions');
     
     if (!question || !questionsContainer) {
         console.error('No question or container found');
@@ -143,52 +144,20 @@ function displayCurrentUserQuestion() {
     }
 
     const questionId = question.id || question._id;
-    const currentVote = question.userVote || userVotes[questionId];
+    const currentSelection = userSelections[questionId];
+    const currentVote = userVotes[questionId];
 
-    console.log('Question Vote Details:', {
-        questionId: questionId,
-        title: question.title,
-        userVoteFromQuestion: question.userVote,
-        userVoteFromStore: userVotes[questionId],
-        finalVoteUsed: currentVote,
-        nominees: question.nominees.map(n => ({
-            id: n._id || n.id,
-            name: n.name
-        }))
-    });
-
-    // Safe access to question properties
     const safeQuestion = {
         id: questionId,
         title: question.title || 'Untitled Question',
         description: question.description || '',
         nominees: Array.isArray(question.nominees) ? question.nominees : [],
-        userVote: currentVote ? currentVote.toString() : null
+        userSelection: currentSelection,
+        userVote: currentVote
     };
-    
-    console.log('Question Processing:', JSON.stringify({
-        questionId: safeQuestion.id,
-        title: safeQuestion.title,
-        hasUserVoted: !!safeQuestion.userVote,
-        votedFor: safeQuestion.userVote,
-        numberOfNominees: safeQuestion.nominees.length
-    }, null, 2));
 
-    // Add voting progress indicator
-    const votedCount = Object.keys(userVotes).length;
-    const totalQuestions = currentQuestions.length;
-    
     questionsContainer.innerHTML = `
         <div class="question-container">
-            <div class="voting-progress">
-                <span class="progress-text">
-                    ${votedCount} of ${totalQuestions} questions voted
-                </span>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${(votedCount/totalQuestions) * 100}%"></div>
-                </div>
-            </div>
-            
             <div class="question-header">
                 <div class="question-content">
                     <h1 class="question-title">${safeQuestion.title}</h1>
@@ -201,56 +170,53 @@ function displayCurrentUserQuestion() {
                     const nomineeId = (nominee._id || nominee.id).toString();
                     const nomineeName = nominee.name || 'Unknown';
                     
-                    // Check if this nominee was voted for
-                    const isVoted = safeQuestion.userVote && nomineeId === safeQuestion.userVote;
-                    
-                    console.log(`Nominee "${nomineeName}" Details:`, {
-                        nomineeId,
-                        isVoted,
-                        userVote: safeQuestion.userVote,
-                        comparison: `${nomineeId} === ${safeQuestion.userVote}`
-                    });
+                    const isSelected = safeQuestion.userSelection === nomineeId;
+                    const isVoted = safeQuestion.userVote === nomineeId;
                     
                     const cardClasses = [
                         'nominee-card',
-                        isVoted ? 'selected' : '',
-                        safeQuestion.userVote ? 'voted' : ''
+                        isSelected ? 'selected' : '',
+                        isVoted ? 'voted' : ''
                     ].filter(Boolean).join(' ');
                     
                     return `
                         <div class="${cardClasses}" 
                              data-nominee-id="${nomineeId}"
-                             data-voted="${isVoted}"
-                             onclick="${safeQuestion.userVote ? '' : `selectNominee('${safeQuestion.id}', '${nomineeId}')`}">
+                             onclick="${isVoted ? '' : `selectNominee('${safeQuestion.id}', '${nomineeId}')`}">
                             <div class="nominee-avatar">
-                                ${
-        nominee.image
-        ? `<img src="${nominee.image}" alt="${nomineeName}" class="nominee-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
-        : `<div class="nominee-initial-avatar">${(nomineeName || 'U').charAt(0).toUpperCase()}</div>`
-    }
+                                ${nominee.image 
+                                    ? `<img src="${nominee.image}" alt="${nomineeName}" class="nominee-avatar-img" 
+                                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                       <div class="nominee-initial-avatar" style="display:none;">
+                                           ${(nomineeName || 'U').charAt(0).toUpperCase()}
+                                       </div>`
+                                    : `<div class="nominee-initial-avatar">
+                                           ${(nomineeName || 'U').charAt(0).toUpperCase()}
+                                       </div>`
+                                }
                             </div>
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
                             </div>
-                            ${isVoted ? '<div class="selected-indicator">✓ Your Vote</div>' : ''}
+                            ${isVoted ? '<div class="selected-indicator">✓ Voted</div>' : 
+                              isSelected ? '<div class="selected-indicator">Selected</div>' : ''}
                         </div>
                     `;
                 }).join('')}
             </div>
             
             <div class="vote-button-container">
-                <button class="btn btn-submit-vote ${safeQuestion.userVote ? 'disabled' : ''}" 
+                <button class="btn btn-submit-vote ${!safeQuestion.userSelection || safeQuestion.userVote ? 'disabled' : ''}" 
                         id="submitVoteBtn"
                         onclick="submitCurrentVote()"
-                        ${safeQuestion.userVote ? 'disabled' : ''}>
+                        ${!safeQuestion.userSelection || safeQuestion.userVote ? 'disabled' : ''}>
                     ${safeQuestion.userVote ? 'Vote Submitted' : 'Submit Vote'}
                 </button>
             </div>
 
             <div class="navigation-buttons">
                 <button class="nav-btn ${currentQuestionIndex === 0 ? 'disabled' : ''}" 
-                        onclick="previousUserQuestion()" 
-                        ${currentQuestionIndex === 0 ? 'disabled' : ''}>
+                        onclick="previousUserQuestion()">
                     ← Previous
                 </button>
                 
@@ -260,132 +226,82 @@ function displayCurrentUserQuestion() {
                     <span class="total-num">${currentQuestions.length}</span>
                 </div>
                 
-                <button class="nav-btn ${currentQuestionIndex === currentQuestions.length - 1 ? 
-                    (areAllVotesComplete() ? '' : 'disabled') : ''}" 
-                        onclick="${currentQuestionIndex === currentQuestions.length - 1 ? 
-                            'submitCurrentVote()' : 'nextUserQuestion()'}" 
-                        ${currentQuestionIndex === currentQuestions.length - 1 && !areAllVotesComplete() ? 'disabled' : ''}>
-                    ${currentQuestionIndex === currentQuestions.length - 1 ? 'Review Votes' : 'Next →'}
+                <button class="nav-btn ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}" 
+                        onclick="nextUserQuestion()">
+                    Next →
                 </button>
             </div>
         </div>
     `;
-    
-    // Double check the selected state after rendering
-    const selectedNominee = document.querySelector('.nominee-card.selected');
-    console.log('Selected nominee after render:', selectedNominee ? {
-        id: selectedNominee.dataset.nomineeId,
-        voted: selectedNominee.dataset.voted,
-        classes: selectedNominee.className
-    } : 'None');
-    
-    console.log('=== Question Display Updated ===\n');
 }
 
 function selectNominee(questionId, nomineeId) {
-    console.log('Selecting nominee:', { questionId, nomineeId });
+    if (userVotes[questionId]) return; // Don't allow selection if already voted
     
-    const question = currentQuestions[currentQuestionIndex];
-    if (!question || (question.id || question._id) !== questionId || question.userVote) {
-        console.log('Cannot select nominee:', {
-            questionMissing: !question,
-            wrongQuestion: question && (question.id || question._id) !== questionId,
-            alreadyVoted: question?.userVote
-        });
-        return;
-    }
-    
-    // Remove previous selection
-    document.querySelectorAll('.nominee-card').forEach(card => {
-        card.classList.remove('selected');
-    });
-    
-    // Add selection to clicked nominee
-    const selectedCard = document.querySelector(`[data-nominee-id="${nomineeId}"]`);
-    if (selectedCard) {
-        selectedCard.classList.add('selected');
-        console.log('Selected nominee card updated');
-    }
-    
-    // Store the vote
-    userVotes[questionId] = nomineeId;
-    
-    // Enable submit button if not already voted
-    const submitBtn = document.getElementById('submitVoteBtn');
-    if (submitBtn && !question.userVote) {
-        submitBtn.disabled = false;
-        submitBtn.classList.remove('disabled');
-        submitBtn.innerHTML = 'Submit Vote';
-        console.log('Submit button enabled');
-    }
+    userSelections[questionId] = nomineeId;
+    displayCurrentUserQuestion();
 }
 
 async function submitCurrentVote() {
     const question = currentQuestions[currentQuestionIndex];
     const questionId = question.id || question._id;
-    const selectedNomineeId = userVotes[questionId];
+    const selectedNomineeId = userSelections[questionId];
     
     if (!selectedNomineeId) {
         showToast('Please select a nominee first', 'error');
         return;
     }
-
-    // If this is the last question, check if all questions have votes
-    if (currentQuestionIndex === currentQuestions.length - 1) {
-        // Check for any unvoted questions
-        const unvotedQuestions = currentQuestions.filter(q => {
-            const qId = q.id || q._id;
-            return !userVotes[qId];
+    
+    try {
+        showLoading();
+        const response = await fetch(`${MCA.baseURL}/vote/submit`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${MCA.token}`
+            },
+            body: JSON.stringify({
+                questionId: questionId,
+                nomineeId: selectedNomineeId
+            })
         });
         
-        if (unvotedQuestions.length > 0) {
-            // Calculate first unvoted question index
-            const firstUnvotedIndex = currentQuestions.findIndex(q => {
-                const qId = q.id || q._id;
-                return !userVotes[qId];
-            });
+        if (response.ok) {
+            userVotes[questionId] = selectedNomineeId;
+            delete userSelections[questionId];
+            showToast('Vote submitted successfully!', 'success');
             
-            showToast('Please vote on all questions before proceeding to review', 'warning');
-            
-            // Navigate to the first unvoted question
-            if (firstUnvotedIndex !== -1) {
-                currentQuestionIndex = firstUnvotedIndex;
-                displayCurrentUserQuestion();
+            // Check if this was the last question and all questions are voted
+            if (currentQuestionIndex === currentQuestions.length - 1 && 
+                Object.keys(userVotes).length === currentQuestions.length) {
+                showVoteReviewScreen();
             }
-            return;
+        } else {
+            throw new Error('Failed to submit vote');
         }
-        
-        // If all questions have votes, show review screen
-        showVoteReviewScreen();
-        return;
+    } catch (error) {
+        console.error('Error submitting vote:', error);
+        showToast('Error submitting vote', 'error');
+    } finally {
+        hideLoading();
+        displayCurrentUserQuestion();
     }
-
-    // Move to next question automatically
-    nextUserQuestion();
-}
-
-// Add helper function to check if all votes are complete
-function areAllVotesComplete() {
-    return currentQuestions.every(question => {
-        const questionId = question.id || question._id;
-        return userVotes[questionId];
-    });
 }
 
 function showVoteReviewScreen() {
     const questionsContainer = document.getElementById('votingQuestions');
     
-    let reviewHTML = `
+    questionsContainer.innerHTML = `
         <div class="review-screen">
             <h2>Review Your Votes</h2>
-            <p>Please review your selections before final submission</p>
+            <p>Please review all your votes before final submission</p>
             
             <div class="review-list">
                 ${currentQuestions.map((question, index) => {
                     const questionId = question.id || question._id;
-                    const selectedNomineeId = userVotes[questionId];
-                    const selectedNominee = question.nominees.find(n => 
-                        (n._id || n.id).toString() === selectedNomineeId
+                    const votedNomineeId = userVotes[questionId];
+                    const votedNominee = question.nominees.find(n => 
+                        (n._id || n.id).toString() === votedNomineeId
                     );
                     
                     return `
@@ -395,13 +311,13 @@ function showVoteReviewScreen() {
                                 <h3>${question.title}</h3>
                             </div>
                             <div class="selected-nominee">
-                                ${selectedNominee ? `
+                                ${votedNominee ? `
                                     <div class="nominee-preview">
-                                        ${selectedNominee.image 
-                                            ? `<img src="${selectedNominee.image}" alt="${selectedNominee.name}" class="nominee-small-img">` 
-                                            : `<div class="nominee-small-initial">${selectedNominee.name.charAt(0)}</div>`
+                                        ${votedNominee.image 
+                                            ? `<img src="${votedNominee.image}" alt="${votedNominee.name}" class="nominee-small-img">` 
+                                            : `<div class="nominee-small-initial">${votedNominee.name.charAt(0)}</div>`
                                         }
-                                        <span>${selectedNominee.name}</span>
+                                        <span>${votedNominee.name}</span>
                                     </div>
                                 ` : '<span class="no-selection">No selection</span>'}
                             </div>
@@ -412,62 +328,25 @@ function showVoteReviewScreen() {
             </div>
             
             <div class="final-submit">
-                <button class="btn btn-submit-vote" onclick="submitFinalVotes()">
-                    Submit All Votes
+                <button class="btn btn-submit-final" onclick="submitFinalVotes()">
+                    Submit Final Votes
                 </button>
             </div>
         </div>
     `;
-    
-    questionsContainer.innerHTML = reviewHTML;
 }
 
-function editVote(questionIndex) {
-    currentQuestionIndex = questionIndex;
+function editVote(index) {
+    currentQuestionIndex = index;
     displayCurrentUserQuestion();
 }
 
 async function submitFinalVotes() {
     try {
         showLoading();
-        
-        // Check if all questions have votes
-        const unvotedQuestions = currentQuestions.filter(q => {
-            const questionId = q.id || q._id;
-            return !userVotes[questionId];
-        });
-        
-        if (unvotedQuestions.length > 0) {
-            showToast('Please vote on all questions before final submission', 'error');
-            return;
-        }
-        
-        // Submit all votes
-        const votePromises = currentQuestions.map(question => {
-            const questionId = question.id || question._id;
-            const nomineeId = userVotes[questionId];
-            
-            return fetch(`${MCA.baseURL}/vote/submit`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${MCA.token}`
-                },
-                body: JSON.stringify({
-                    questionId: questionId,
-                    nomineeId: nomineeId
-                })
-            });
-        });
-        
-        await Promise.all(votePromises);
-        
-        // Show success message
         showCongratulationsScreen();
-        finalVoteSubmitted = true;
-        
     } catch (error) {
-        console.error('Error submitting votes:', error);
+        console.error('Error submitting final votes:', error);
         showToast('Error submitting votes', 'error');
     } finally {
         hideLoading();
@@ -479,10 +358,16 @@ function showCongratulationsScreen() {
     
     questionsContainer.innerHTML = `
         <div class="congratulations-screen">
-            <div class="success-icon">🎉</div>
-            <h2>Congratulations!</h2>
-            <p>Your votes have been successfully submitted for MCA 2025.</p>
-            <p>Thank you for participating!</p>
+            <div class="celebration-container">
+                <div class="confetti-left"></div>
+                <div class="confetti-right"></div>
+                <div class="success-content">
+                    <div class="success-icon">🎉</div>
+                    <h2>Congratulations!</h2>
+                    <p>Your votes have been successfully submitted for MCA 2025.</p>
+                    <p>Thank you for participating!</p>
+                </div>
+            </div>
         </div>
     `;
 }
@@ -532,4 +417,12 @@ function getTimeRemaining(endTime) {
 function loadUserProfile() {
     // Implementation for user profile loading
     console.log('Loading user profile...');
+}
+
+// Add helper function to check if all votes are complete
+function areAllVotesComplete() {
+    return currentQuestions.every(question => {
+        const questionId = question.id || question._id;
+        return userVotes[questionId];
+    });
 }
