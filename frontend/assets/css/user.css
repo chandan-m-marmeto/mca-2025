@@ -28,16 +28,16 @@ body:has(#user-dashboard:not(.hidden)) {
 
 .user-container .user-logo {
     display: block !important;
-    text-align: center;
-    margin-bottom: 20px;
+    width: 100px;
+    height: 100px;
+    margin: 0 20px;
 }
 
 .user-container .user-logo img {
     display: block !important;
-    width: 220px;
-    height: 220px;
+    width: 100px;
+    height: 100px;
     object-fit: contain;
-    margin: 0 auto;
 }
 
 .user-container .user-logo::after {
