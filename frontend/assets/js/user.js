@@ -450,7 +450,7 @@ function showCongratulationsScreen() {
                     <h2>Congratulations!</h2>
                     <p>Your votes have been successfully submitted for</p>
                     <p class="award-title">Marmetian's Choice Awards 2025</p>
-                    <p class="thank-you">Thank you for participating in shaping our community's future!</p>
+                    <p class="thank-you">Thank you for participating</p>
                 </div>
             </div>
         </div>
