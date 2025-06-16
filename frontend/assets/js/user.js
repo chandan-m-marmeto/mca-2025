@@ -203,14 +203,14 @@ function displayCurrentUserQuestion() {
                              data-voted="${isVoted}"
                              onclick="${safeQuestion.userVote ? '' : `selectNominee('${safeQuestion.id}', '${nomineeId}')`}">
                             <div class="nominee-avatar">
-                                <div class="nominee-initial-avatar">${(nomineeName || 'U').charAt(0).toUpperCase()}</div>
-                            </div>
-                            <div class="nominee-info">
                                 ${
         nominee.image
         ? `<img src="${nominee.image}" alt="${nomineeName}" class="nominee-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
         : `<div class="nominee-initial-avatar">${(nomineeName || 'U').charAt(0).toUpperCase()}</div>`
     }
+                            </div>
+                            <div class="nominee-info">
+                                <h3 class="nominee-name">${nomineeName}</h3>
                             </div>
                             ${isVoted ? '<div class="selected-indicator">✓ Your Vote</div>' : ''}
                         </div>
