@@ -75,7 +75,12 @@ async function loadUserQuestions() {
             console.log('Final user votes after merging:', userVotes);
             
             if (currentQuestions.length > 0) {
-                displayCurrentUserQuestion();
+                // If all questions are already voted, show review screen
+                if (areAllVotesComplete()) {
+                    showVoteReviewScreen();
+                } else {
+                    displayCurrentUserQuestion();
+                }
             } else {
                 console.log('No questions available, showing empty state');
                 displayNoQuestionsState();
@@ -198,20 +203,26 @@ function displayCurrentUserQuestion() {
                             <div class="nominee-info">
                                 <h3 class="nominee-name">${nomineeName}</h3>
                             </div>
-                            ${isVoted ? '<div class="selected-indicator">✓ Voted</div>' : 
-                              isSelected ? '<div class="selected-indicator">Selected</div>' : ''}
+                            ${isVoted ? '<div class="voted-indicator">✓ Voted</div>' : ''}
                         </div>
                     `;
                 }).join('')}
             </div>
             
             <div class="vote-button-container">
-                <button class="btn btn-submit-vote ${!safeQuestion.userSelection || safeQuestion.userVote ? 'disabled' : ''}" 
-                        id="submitVoteBtn"
-                        onclick="submitCurrentVote()"
-                        ${!safeQuestion.userSelection || safeQuestion.userVote ? 'disabled' : ''}>
-                    ${safeQuestion.userVote ? 'Vote Submitted' : 'Submit Vote'}
-                </button>
+                ${!safeQuestion.userVote ? `
+                    <button class="btn btn-submit-vote ${!safeQuestion.userSelection ? 'disabled' : ''}" 
+                            id="submitVoteBtn"
+                            onclick="submitCurrentVote()"
+                            ${!safeQuestion.userSelection ? 'disabled' : ''}>
+                        Submit Vote
+                    </button>
+                ` : ''}
+                ${areAllVotesComplete() ? `
+                    <button class="btn btn-review" onclick="showVoteReviewScreen()">
+                        Review All Votes
+                    </button>
+                ` : ''}
             </div>
 
             <div class="navigation-buttons">
@@ -236,8 +247,7 @@ function displayCurrentUserQuestion() {
 }
 
 function selectNominee(questionId, nomineeId) {
-    if (userVotes[questionId]) return; // Don't allow selection if already voted
-    
+    if (userVotes[questionId]) return;
     userSelections[questionId] = nomineeId;
     displayCurrentUserQuestion();
 }
@@ -271,10 +281,10 @@ async function submitCurrentVote() {
             delete userSelections[questionId];
             showToast('Vote submitted successfully!', 'success');
             
-            // Check if this was the last question and all questions are voted
-            if (currentQuestionIndex === currentQuestions.length - 1 && 
-                Object.keys(userVotes).length === currentQuestions.length) {
+            if (areAllVotesComplete()) {
                 showVoteReviewScreen();
+            } else {
+                displayCurrentUserQuestion();
             }
         } else {
             throw new Error('Failed to submit vote');
@@ -282,9 +292,9 @@ async function submitCurrentVote() {
     } catch (error) {
         console.error('Error submitting vote:', error);
         showToast('Error submitting vote', 'error');
+        displayCurrentUserQuestion();
     } finally {
         hideLoading();
-        displayCurrentUserQuestion();
     }
 }
 
@@ -383,10 +393,6 @@ function nextUserQuestion() {
     if (currentQuestionIndex < currentQuestions.length - 1) {
         currentQuestionIndex++;
         displayCurrentUserQuestion();
-    } else if (areAllVotesComplete()) {
-        showVoteReviewScreen();
-    } else {
-        showToast('Please vote on all questions before proceeding to review', 'warning');
     }
 }
 

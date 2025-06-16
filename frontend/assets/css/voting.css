@@ -1,0 +1,238 @@
+/* Review Screen Styles */
+.review-screen {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.review-screen h2 {
+    text-align: center;
+    color: #ffffff;
+    margin-bottom: 1rem;
+}
+
+.review-screen p {
+    text-align: center;
+    color: #cccccc;
+    margin-bottom: 2rem;
+}
+
+.review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.review-item {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.review-question {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.question-number {
+    background: #2196F3;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.selected-nominee {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 200px;
+}
+
+.nominee-preview {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.nominee-small-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.nominee-small-initial {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #2196F3;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.btn-edit {
+    background: transparent;
+    border: 1px solid #2196F3;
+    color: #2196F3;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-edit:hover {
+    background: rgba(33, 150, 243, 0.1);
+}
+
+.btn-submit-final {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 2rem;
+    width: 100%;
+    max-width: 300px;
+}
+
+.btn-submit-final:hover {
+    background: #45a049;
+}
+
+.final-submit {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+/* Celebration Screen Styles */
+.congratulations-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    position: relative;
+    overflow: hidden;
+}
+
+.celebration-container {
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    padding: 2rem;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.success-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: bounce 1s ease infinite;
+}
+
+.success-content h2 {
+    color: #ffffff;
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.success-content p {
+    color: #cccccc;
+    margin-bottom: 0.5rem;
+}
+
+/* Confetti Animation */
+.confetti-left,
+.confetti-right {
+    position: absolute;
+    width: 100px;
+    height: 100%;
+    top: 0;
+}
+
+.confetti-left {
+    left: 0;
+    animation: confettiRain 3s linear infinite;
+}
+
+.confetti-right {
+    right: 0;
+    animation: confettiRain 2.5s linear infinite reverse;
+}
+
+.confetti-left::before,
+.confetti-right::before {
+    content: '🎉';
+    font-size: 1.5rem;
+    position: absolute;
+    animation: rotate 1s linear infinite;
+}
+
+@keyframes confettiRain {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+/* Voting UI Styles */
+.voted-indicator {
+    background: #4CAF50;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.btn-review {
+    background: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 1rem;
+}
+
+.btn-review:hover {
+    background: #1976D2;
+}
+
+.vote-button-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin: 2rem 0;
+}
