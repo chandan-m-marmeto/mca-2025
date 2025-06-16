@@ -174,8 +174,21 @@ function displayCurrentUserQuestion() {
         numberOfNominees: safeQuestion.nominees.length
     }, null, 2));
 
+    // Add voting progress indicator
+    const votedCount = Object.keys(userVotes).length;
+    const totalQuestions = currentQuestions.length;
+    
     questionsContainer.innerHTML = `
         <div class="question-container">
+            <div class="voting-progress">
+                <span class="progress-text">
+                    ${votedCount} of ${totalQuestions} questions voted
+                </span>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${(votedCount/totalQuestions) * 100}%"></div>
+                </div>
+            </div>
+            
             <div class="question-header">
                 <div class="question-content">
                     <h1 class="question-title">${safeQuestion.title}</h1>
@@ -247,10 +260,12 @@ function displayCurrentUserQuestion() {
                     <span class="total-num">${currentQuestions.length}</span>
                 </div>
                 
-                <button class="nav-btn ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}" 
-                        onclick="nextUserQuestion()" 
-                        ${currentQuestionIndex === currentQuestions.length - 1 ? 'disabled' : ''}>
-                    Next →
+                <button class="nav-btn ${currentQuestionIndex === currentQuestions.length - 1 ? 
+                    (areAllVotesComplete() ? '' : 'disabled') : ''}" 
+                        onclick="${currentQuestionIndex === currentQuestions.length - 1 ? 
+                            'submitCurrentVote()' : 'nextUserQuestion()'}" 
+                        ${currentQuestionIndex === currentQuestions.length - 1 && !areAllVotesComplete() ? 'disabled' : ''}>
+                    ${currentQuestionIndex === currentQuestions.length - 1 ? 'Review Votes' : 'Next →'}
                 </button>
             </div>
         </div>
@@ -315,14 +330,46 @@ async function submitCurrentVote() {
         return;
     }
 
-    // If this is the last question, show review screen instead of submitting
+    // If this is the last question, check if all questions have votes
     if (currentQuestionIndex === currentQuestions.length - 1) {
+        // Check for any unvoted questions
+        const unvotedQuestions = currentQuestions.filter(q => {
+            const qId = q.id || q._id;
+            return !userVotes[qId];
+        });
+        
+        if (unvotedQuestions.length > 0) {
+            // Calculate first unvoted question index
+            const firstUnvotedIndex = currentQuestions.findIndex(q => {
+                const qId = q.id || q._id;
+                return !userVotes[qId];
+            });
+            
+            showToast('Please vote on all questions before proceeding to review', 'warning');
+            
+            // Navigate to the first unvoted question
+            if (firstUnvotedIndex !== -1) {
+                currentQuestionIndex = firstUnvotedIndex;
+                displayCurrentUserQuestion();
+            }
+            return;
+        }
+        
+        // If all questions have votes, show review screen
         showVoteReviewScreen();
         return;
     }
 
     // Move to next question automatically
     nextUserQuestion();
+}
+
+// Add helper function to check if all votes are complete
+function areAllVotesComplete() {
+    return currentQuestions.every(question => {
+        const questionId = question.id || question._id;
+        return userVotes[questionId];
+    });
 }
 
 function showVoteReviewScreen() {
@@ -451,6 +498,10 @@ function nextUserQuestion() {
     if (currentQuestionIndex < currentQuestions.length - 1) {
         currentQuestionIndex++;
         displayCurrentUserQuestion();
+    } else if (areAllVotesComplete()) {
+        showVoteReviewScreen();
+    } else {
+        showToast('Please vote on all questions before proceeding to review', 'warning');
     }
 }
 
