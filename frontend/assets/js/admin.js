@@ -122,12 +122,15 @@ function displayCurrentAdminQuestion() {
     const question = adminQuestions[currentAdminQuestionIndex];
     const questionsGrid = document.getElementById('questionsGrid');
     
+    // Get the voting session status instead of individual question status
+    const votingSessionActive = document.querySelector('.status-dot.active') !== null;
+    
     questionsGrid.innerHTML = `
         <div class="question-card">
             <div class="question-header">
                 <h2>${question.title}</h2>
-                <span class="status ${question.isActive ? 'active' : 'inactive'}">
-                    ${question.isActive ? '🟢 Active' : '🔴 Inactive'}
+                <span class="status ${votingSessionActive ? 'active' : 'inactive'}">
+                    ${votingSessionActive ? '🟢 Active' : '🔴 Inactive'}
                 </span>
             </div>
 
