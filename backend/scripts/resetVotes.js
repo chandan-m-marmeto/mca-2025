@@ -21,48 +21,33 @@ const resetVotes = async (userEmail) => {
             return;
         }
 
-        // Start a session for transaction
-        const session = await mongoose.startSession();
-        session.startTransaction();
+        console.log(`Found user: ${user.email}`);
+        console.log(`Number of votes to reset: ${user.votingHistory.length}`);
 
-        try {
-            console.log(`Found user: ${user.email}`);
-            console.log(`Number of votes to reset: ${user.votingHistory.length}`);
-
-            // Decrement vote count for each nominee the user voted for
-            for (const vote of user.votingHistory) {
+        // Decrement vote count for each nominee the user voted for
+        for (const vote of user.votingHistory) {
+            if (vote.votedFor) {
                 await Nominee.findByIdAndUpdate(
                     vote.votedFor,
-                    { $inc: { votes: -1 } }, // Decrease vote count by 1
-                    { session }
+                    { $inc: { votes: -1 } }
                 );
                 console.log(`Reset vote for nominee: ${vote.votedFor}`);
             }
-
-            // Clear user's voting history and reset voting status
-            await User.findByIdAndUpdate(
-                user._id,
-                {
-                    $set: {
-                        votingHistory: [],
-                        votingFinalized: false,
-                        finalizedAt: null
-                    }
-                },
-                { session }
-            );
-
-            // Commit the transaction
-            await session.commitTransaction();
-            console.log('Successfully reset voting data');
-        } catch (error) {
-            // If there's an error, abort the transaction
-            await session.abortTransaction();
-            throw error;
-        } finally {
-            // End the session
-            session.endSession();
         }
+
+        // Clear user's voting history and reset voting status
+        await User.findByIdAndUpdate(
+            user._id,
+            {
+                $set: {
+                    votingHistory: [],
+                    votingFinalized: false,
+                    finalizedAt: null
+                }
+            }
+        );
+
+        console.log('Successfully reset voting data');
 
     } catch (error) {
         console.error('Error resetting votes:', error);
