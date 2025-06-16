@@ -157,10 +157,11 @@ export const startVotingSession = async (req, res) => {
 
         const { duration } = req.body;
         
-        if (!duration || duration < 1) {
+        // Modified validation to allow decimal hours
+        if (!duration || duration <= 0) {
             return res.status(400).json({
                 success: false,
-                error: 'Valid duration in hours is required'
+                error: 'Valid duration is required (must be greater than 0)'
             });
         }
 
