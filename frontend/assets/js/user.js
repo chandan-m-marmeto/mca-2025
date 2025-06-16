@@ -2,6 +2,8 @@
 let currentQuestions = [];
 let currentQuestionIndex = 0;
 let userVotes = {};
+let allSelectionsComplete = false;
+let finalVoteSubmitted = false;
 
 // Load questions for user voting
 async function loadUserQuestions() {
@@ -79,6 +81,11 @@ async function loadUserQuestions() {
             }
         } else {
             throw new Error('Failed to load questions');
+        }
+
+        if (finalVoteSubmitted) {
+            showCongratulationsScreen();
+            return;
         }
     } catch (error) {
         console.error('Error loading user questions:', error);
@@ -303,67 +310,134 @@ async function submitCurrentVote() {
     const questionId = question.id || question._id;
     const selectedNomineeId = userVotes[questionId];
     
-    // Check if already voted
-    if (question.userVote || userVotes[questionId]) {
-        console.log('Already voted for this question:', {
-            questionId,
-            existingVote: question.userVote || userVotes[questionId]
-        });
-        showToast('You have already voted for this question', 'error');
-        return;
-    }
-    
     if (!selectedNomineeId) {
         showToast('Please select a nominee first', 'error');
         return;
     }
+
+    // If this is the last question, show review screen instead of submitting
+    if (currentQuestionIndex === currentQuestions.length - 1) {
+        showVoteReviewScreen();
+        return;
+    }
+
+    // Move to next question automatically
+    nextUserQuestion();
+}
+
+function showVoteReviewScreen() {
+    const questionsContainer = document.getElementById('votingQuestions');
     
+    let reviewHTML = `
+        <div class="review-screen">
+            <h2>Review Your Votes</h2>
+            <p>Please review your selections before final submission</p>
+            
+            <div class="review-list">
+                ${currentQuestions.map((question, index) => {
+                    const questionId = question.id || question._id;
+                    const selectedNomineeId = userVotes[questionId];
+                    const selectedNominee = question.nominees.find(n => 
+                        (n._id || n.id).toString() === selectedNomineeId
+                    );
+                    
+                    return `
+                        <div class="review-item">
+                            <div class="review-question">
+                                <span class="question-number">${index + 1}</span>
+                                <h3>${question.title}</h3>
+                            </div>
+                            <div class="selected-nominee">
+                                ${selectedNominee ? `
+                                    <div class="nominee-preview">
+                                        ${selectedNominee.image 
+                                            ? `<img src="${selectedNominee.image}" alt="${selectedNominee.name}" class="nominee-small-img">` 
+                                            : `<div class="nominee-small-initial">${selectedNominee.name.charAt(0)}</div>`
+                                        }
+                                        <span>${selectedNominee.name}</span>
+                                    </div>
+                                ` : '<span class="no-selection">No selection</span>'}
+                            </div>
+                            <button class="btn-edit" onclick="editVote(${index})">Edit</button>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+            
+            <div class="final-submit">
+                <button class="btn btn-submit-vote" onclick="submitFinalVotes()">
+                    Submit All Votes
+                </button>
+            </div>
+        </div>
+    `;
+    
+    questionsContainer.innerHTML = reviewHTML;
+}
+
+function editVote(questionIndex) {
+    currentQuestionIndex = questionIndex;
+    displayCurrentUserQuestion();
+}
+
+async function submitFinalVotes() {
     try {
         showLoading();
-        const response = await fetch(`${MCA.baseURL}/vote/submit`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${MCA.token}`
-            },
-            body: JSON.stringify({
-                questionId: questionId,
-                nomineeId: selectedNomineeId
-            })
+        
+        // Check if all questions have votes
+        const unvotedQuestions = currentQuestions.filter(q => {
+            const questionId = q.id || q._id;
+            return !userVotes[questionId];
         });
         
-        const data = await response.json();
-        
-        if (response.ok) {
-            // Update the current question's userVote
-            question.userVote = selectedNomineeId;
-            userVotes[questionId] = selectedNomineeId;
-            
-            // Trigger celebration background effect
-            if (window.userBackground) {
-                window.userBackground.celebrateVote();
-            }
-            
-            showToast('Vote submitted successfully!', 'success');
-            
-            // Update the UI
-            displayCurrentUserQuestion();
-            
-        } else {
-            // If server says already voted, update our local state
-            if (data.error && data.error.toLowerCase().includes('already voted')) {
-                question.userVote = selectedNomineeId;
-                userVotes[questionId] = selectedNomineeId;
-                displayCurrentUserQuestion();
-            }
-            showToast(data.error || 'Failed to submit vote', 'error');
+        if (unvotedQuestions.length > 0) {
+            showToast('Please vote on all questions before final submission', 'error');
+            return;
         }
+        
+        // Submit all votes
+        const votePromises = currentQuestions.map(question => {
+            const questionId = question.id || question._id;
+            const nomineeId = userVotes[questionId];
+            
+            return fetch(`${MCA.baseURL}/vote/submit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${MCA.token}`
+                },
+                body: JSON.stringify({
+                    questionId: questionId,
+                    nomineeId: nomineeId
+                })
+            });
+        });
+        
+        await Promise.all(votePromises);
+        
+        // Show success message
+        showCongratulationsScreen();
+        finalVoteSubmitted = true;
+        
     } catch (error) {
-        console.error('Error submitting vote:', error);
-        showToast('Error submitting vote', 'error');
+        console.error('Error submitting votes:', error);
+        showToast('Error submitting votes', 'error');
     } finally {
         hideLoading();
     }
+}
+
+function showCongratulationsScreen() {
+    const questionsContainer = document.getElementById('votingQuestions');
+    
+    questionsContainer.innerHTML = `
+        <div class="congratulations-screen">
+            <div class="success-icon">🎉</div>
+            <h2>Congratulations!</h2>
+            <p>Your votes have been successfully submitted for MCA 2025.</p>
+            <p>Thank you for participating!</p>
+        </div>
+    `;
 }
 
 function previousUserQuestion() {
