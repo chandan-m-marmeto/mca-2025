@@ -173,6 +173,16 @@ function displayCurrentUserQuestion() {
 
     questionsContainer.innerHTML = `
         <div class="question-container">
+            <div class="voting-timer-container">
+                <div id="votingTimer" class="voting-timer">
+                    <div class="timer-status">
+                        <span class="status-dot active"></span>
+                        <span class="status-text">Voting is ACTIVE</span>
+                    </div>
+                    <div class="time-remaining"></div>
+                </div>
+            </div>
+
             <div class="question-header">
                 <div class="question-content">
                     <h1 class="question-title">${safeQuestion.title}</h1>
@@ -254,6 +264,53 @@ function displayCurrentUserQuestion() {
             </div>
         </div>
     `;
+
+    // Add timer styles
+    const styles = document.createElement('style');
+    styles.textContent = `
+        .voting-timer-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .voting-timer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .timer-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ff4444;
+        }
+
+        .status-dot.active {
+            background: #00C853;
+            box-shadow: 0 0 10px rgba(0, 200, 83, 0.5);
+        }
+
+        .time-remaining {
+            font-size: 16px;
+            font-weight: 500;
+            color: #FFD700;
+        }
+    `;
+    document.head.appendChild(styles);
+
+    // Start the timer
+    startVotingTimer();
 }
 
 function selectNominee(questionId, nomineeId) {
@@ -400,11 +457,14 @@ function getTimeRemaining(endTime) {
         
         const hours = Math.floor(timeLeft / (1000 * 60 * 60));
         const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
         
         if (hours > 0) {
-            return `${hours}h ${minutes}m remaining`;
+            return `${hours}h ${minutes}m ${seconds}s remaining`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${seconds}s remaining`;
         } else {
-            return `${minutes}m remaining`;
+            return `${seconds}s remaining`;
         }
     } catch (error) {
         console.error('Error calculating time remaining:', error);
@@ -455,4 +515,42 @@ function showCongratulationsScreen() {
             </div>
         </div>
     `;
+}
+
+// Add function to start and update the timer
+function startVotingTimer() {
+    // Clear any existing timer
+    if (window.votingTimerInterval) {
+        clearInterval(window.votingTimerInterval);
+    }
+
+    async function updateTimer() {
+        try {
+            const response = await fetch(`${MCA.baseURL}/vote/session/status`, {
+                headers: { 'Authorization': `Bearer ${MCA.token}` }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                const timeRemainingElement = document.querySelector('.time-remaining');
+                
+                if (timeRemainingElement && data.data.endTime) {
+                    const timeRemaining = getTimeRemaining(data.data.endTime);
+                    timeRemainingElement.textContent = timeRemaining;
+
+                    // If voting has ended, refresh the page
+                    if (timeRemaining === 'Voting ended') {
+                        clearInterval(window.votingTimerInterval);
+                        loadUserQuestions(); // Reload to show no-voting state
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error updating timer:', error);
+        }
+    }
+
+    // Update immediately and then every second
+    updateTimer();
+    window.votingTimerInterval = setInterval(updateTimer, 1000);
 }
