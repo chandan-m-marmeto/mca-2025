@@ -118,19 +118,31 @@ async function loadQuestions() {
     }
 }
 
-function displayCurrentAdminQuestion() {
+async function displayCurrentAdminQuestion() {
     const question = adminQuestions[currentAdminQuestionIndex];
     const questionsGrid = document.getElementById('questionsGrid');
     
-    // Get the voting session status instead of individual question status
-    const votingSessionActive = document.querySelector('.status-dot.active') !== null;
+    // First get the current voting session status
+    let votingSessionActive = false;
+    try {
+        const response = await fetch(`${MCA.baseURL}/admin/voting-session/status`, {
+            headers: { 'Authorization': `Bearer ${MCA.token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            votingSessionActive = data.data.isActive;
+        }
+    } catch (error) {
+        console.error('Error checking voting status:', error);
+    }
     
     questionsGrid.innerHTML = `
         <div class="question-card">
             <div class="question-header">
                 <h2>${question.title}</h2>
                 <span class="status ${votingSessionActive ? 'active' : 'inactive'}">
-                    ${votingSessionActive ? '🟢 Active' : '🔴 Inactive'}
+                    ${votingSessionActive ? '🟢 ACTIVE' : '🔴 INACTIVE'}
                 </span>
             </div>
 
