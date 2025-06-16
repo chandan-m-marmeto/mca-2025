@@ -216,13 +216,27 @@ function showSettings() {
                 <div class="settings-actions">
                     <div class="duration-wrapper" id="durationWrapper">
                         <div class="duration-input" id="durationInput">
-                            <label for="votingDuration">Duration (hours)</label>
-                            <input type="number" 
-                                   id="votingDuration" 
-                                   min="1" 
-                                   max="72" 
-                                   value="24" 
-                                   placeholder="Enter duration in hours">
+                            <label>Duration</label>
+                            <div class="duration-fields">
+                                <div class="duration-field">
+                                    <input type="number" 
+                                           id="votingDurationHours" 
+                                           min="0" 
+                                           max="72" 
+                                           value="1" 
+                                           placeholder="Hours">
+                                    <span class="duration-label">Hours</span>
+                                </div>
+                                <div class="duration-field">
+                                    <input type="number" 
+                                           id="votingDurationMinutes" 
+                                           min="0" 
+                                           max="59" 
+                                           value="0" 
+                                           placeholder="Minutes">
+                                    <span class="duration-label">Minutes</span>
+                                </div>
+                            </div>
                             <span class="duration-hint">Maximum 72 hours</span>
                         </div>
                     </div>
@@ -374,6 +388,33 @@ function showSettings() {
             background: #ff4444;
             box-shadow: 0 4px 12px rgba(255, 68, 68, 0.3);
         }
+
+        .duration-fields {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .duration-field {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .duration-field input {
+            width: 80px;
+            padding: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            font-size: 16px;
+        }
+
+        .duration-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
     `;
     document.head.appendChild(styles);
 
@@ -383,11 +424,18 @@ function showSettings() {
     const toggleBtn = document.getElementById('toggleVotingBtn');
     toggleBtn.addEventListener('click', toggleVoting);
     
-    const durationInput = document.getElementById('votingDuration');
+    const durationInput = document.getElementById('votingDurationHours');
     durationInput.addEventListener('input', function() {
         const value = parseInt(this.value);
-        if (value < 1) this.value = 1;
+        if (value < 0) this.value = 0;
         if (value > 72) this.value = 72;
+    });
+    
+    const minutesInput = document.getElementById('votingDurationMinutes');
+    minutesInput.addEventListener('input', function() {
+        const value = parseInt(this.value);
+        if (value < 0) this.value = 0;
+        if (value > 59) this.value = 59;
     });
     
     // Check current status
@@ -397,81 +445,63 @@ function showSettings() {
 async function toggleVoting() {
     const toggleBtn = document.getElementById('toggleVotingBtn');
     const isCurrentlyActive = toggleBtn.classList.contains('active');
-    const durationInput = document.getElementById('votingDuration');
+    const hoursInput = document.getElementById('votingDurationHours');
+    const minutesInput = document.getElementById('votingDurationMinutes');
     const durationWrapper = document.getElementById('durationWrapper');
     
     try {
-        if (!isCurrentlyActive && (!durationInput.value || durationInput.value < 1)) {
-            showToast('Please enter a valid duration between 1-72 hours', 'error');
-            return;
-        }
-
-        // Update UI immediately to show action in progress
-        toggleBtn.disabled = true;
-        toggleBtn.innerHTML = `
-            <span class="btn-icon">⚡</span>
-            <span class="btn-text">${isCurrentlyActive ? 'Deactivating...' : 'Activating...'}</span>
-        `;
-
-        const endpoint = isCurrentlyActive ? 'end' : 'start';
-        const body = isCurrentlyActive ? {} : { duration: parseInt(durationInput.value) };
-
-        // First, start/end the voting session
-        const response = await fetch(`${MCA.baseURL}/admin/voting-session/${endpoint}`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${MCA.token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            // If activating voting, also activate all questions
-            if (!isCurrentlyActive) {
-                try {
-                    // Activate all questions
-                    const questionsResponse = await fetch(`${MCA.baseURL}/admin/questions/activate-all`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${MCA.token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-
-                    if (!questionsResponse.ok) {
-                        showToast('Voting activated but some questions may not be visible. Please check question settings.', 'warning');
-                    }
-                } catch (error) {
-                    console.error('Error activating questions:', error);
-                    showToast('Voting activated but questions activation failed. Please check settings.', 'warning');
-                }
-            }
-
-            updateVotingStatus(!isCurrentlyActive, durationInput.value);
-            showToast(`Voting ${isCurrentlyActive ? 'deactivated' : 'activated'} successfully!`, 'success');
+        if (!isCurrentlyActive) {
+            const hours = parseInt(hoursInput.value) || 0;
+            const minutes = parseInt(minutesInput.value) || 0;
             
-            // Refresh questions list if we're in the questions section
-            if (document.getElementById('questionsContent') && !document.getElementById('questionsContent').classList.contains('hidden')) {
-                loadAdminQuestions();
+            if (hours === 0 && minutes === 0) {
+                showToast('Please enter a valid duration', 'error');
+                return;
             }
+
+            // Convert to total hours (can include decimals)
+            const duration = hours + (minutes / 60);
+
+            // Update UI immediately to show action in progress
+            toggleBtn.disabled = true;
+            toggleBtn.innerHTML = `
+                <span class="btn-icon">⚡</span>
+                <span class="btn-text">Activating...</span>
+            `;
+
+            const response = await fetch(`${MCA.baseURL}/admin/voting-session/start`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${MCA.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ duration })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to activate voting');
+            }
+
+            showToast('Voting activated successfully!', 'success');
+            checkVotingStatus();
         } else {
-            // If server says another session is active, update UI to reflect that
-            if (data.error && data.error.includes('already active')) {
-                updateVotingStatus(true);
-                showToast('A voting session is currently active', 'info');
-            } else {
-                throw new Error(data.error || `Failed to ${isCurrentlyActive ? 'deactivate' : 'activate'} voting`);
+            // Handle deactivation
+            const response = await fetch(`${MCA.baseURL}/admin/voting-session/end`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${MCA.token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to deactivate voting');
             }
+
+            showToast('Voting deactivated successfully!', 'success');
+            checkVotingStatus();
         }
     } catch (error) {
-        console.error('Toggle voting error:', error);
         showToast(error.message, 'error');
-        // On error, refresh status from server to ensure UI is correct
-        checkVotingStatus();
-    } finally {
         toggleBtn.disabled = false;
     }
 }
@@ -506,7 +536,7 @@ function updateVotingStatus(isActive, endTime = null) {
     const statusDot = document.querySelector('.status-dot');
     const statusText = document.querySelector('.status-text');
     const toggleBtn = document.getElementById('toggleVotingBtn');
-    const durationInput = document.getElementById('votingDuration');
+    const durationInput = document.getElementById('votingDurationHours');
     const durationWrapper = document.getElementById('durationWrapper');
     const timeRemaining = document.getElementById('timeRemaining');
 
@@ -577,12 +607,13 @@ function updateTimeRemaining(endTime) {
         
         const hours = Math.floor(timeLeft / (1000 * 60 * 60));
         const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
         
-        timeRemainingElement.textContent = `Time remaining: ${hours}h ${minutes}m`;
+        timeRemainingElement.textContent = `Time remaining: ${hours}h ${minutes}m ${seconds}s`;
     }
     
     updateDisplay();
-    const intervalId = setInterval(updateDisplay, 60000); // Update every minute
+    const intervalId = setInterval(updateDisplay, 1000); // Update every second
     
     // Store the interval ID to clear it later if needed
     timeRemainingElement.dataset.intervalId = intervalId;
