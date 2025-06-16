@@ -18,8 +18,8 @@ function isFinalVoteSubmitted() {
 // Load questions for user voting
 async function loadUserQuestions() {
     try {
-        // Check if final vote was already submitted
-        if (isFinalVoteSubmitted()) {
+        // Check if voting was already completed
+        if (localStorage.getItem('votingCompleted') === 'true') {
             showCongratulationsScreen();
             return;
         }
@@ -314,7 +314,7 @@ function showVoteReviewScreen() {
     questionsContainer.innerHTML = `
         <div class="review-screen">
             <h2>Review Your Votes</h2>
-            <p>Please review all your votes before final submission</p>
+            <p>Here are all your submitted votes</p>
             
             <div class="review-list">
                 ${currentQuestions.map((question, index) => {
@@ -341,77 +341,36 @@ function showVoteReviewScreen() {
                                     </div>
                                 ` : '<span class="no-selection">No selection</span>'}
                             </div>
-                            <button class="btn-edit" onclick="editVote(${index})">Edit</button>
                         </div>
                     `;
                 }).join('')}
             </div>
             
             <div class="final-submit">
-                <button class="btn btn-submit-final" onclick="submitFinalVotes()">
-                    Submit Final Votes
+                <button class="btn btn-submit-final" onclick="completeVoting()">
+                    Complete Voting Process
                 </button>
             </div>
         </div>
     `;
 }
 
-function editVote(index) {
-    currentQuestionIndex = index;
-    // Clear the previous vote from userVotes and move it to userSelections
-    const question = currentQuestions[index];
-    const questionId = question.id || question._id;
-    if (userVotes[questionId]) {
-        userSelections[questionId] = userVotes[questionId];
-        delete userVotes[questionId];
-    }
-    displayCurrentUserQuestion();
-}
-
-async function submitFinalVotes() {
+// Add new function to handle voting completion
+async function completeVoting() {
     try {
         showLoading();
         
-        // Make API call to mark votes as final (you'll need to add this endpoint)
-        const response = await fetch(`${MCA.baseURL}/vote/finalize`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${MCA.token}`
-            }
-        });
-
-        if (response.ok) {
-            setFinalVoteSubmitted(); // Store final submission state
-            showCongratulationsScreen();
-        } else {
-            throw new Error('Failed to finalize votes');
-        }
+        // Store completion status in localStorage
+        localStorage.setItem('votingCompleted', 'true');
+        
+        // Show congratulations screen
+        showCongratulationsScreen();
     } catch (error) {
-        console.error('Error submitting final votes:', error);
-        showToast('Error submitting votes', 'error');
+        console.error('Error completing voting process:', error);
+        showToast('Error completing voting process', 'error');
     } finally {
         hideLoading();
     }
-}
-
-function showCongratulationsScreen() {
-    const questionsContainer = document.getElementById('votingQuestions');
-    
-    questionsContainer.innerHTML = `
-        <div class="congratulations-screen">
-            <div class="celebration-container">
-                <div class="confetti-left"></div>
-                <div class="confetti-right"></div>
-                <div class="success-content">
-                    <div class="success-icon">🎉</div>
-                    <h2>Congratulations!</h2>
-                    <p>Your votes have been successfully submitted for MCA 2025.</p>
-                    <p>Thank you for participating!</p>
-                </div>
-            </div>
-        </div>
-    `;
 }
 
 function previousUserQuestion() {
@@ -465,8 +424,33 @@ function areAllVotesComplete() {
     });
 }
 
-// Add logout handler to clear final vote state
+// Add logout handler to clear voting status on logout
 function handleLogout() {
-    localStorage.removeItem('finalVoteSubmitted');
+    // Don't clear votingCompleted status as we want to persist it
+    // Clear other voting related data
+    userSelections = {};
+    userVotes = {};
+    currentQuestions = [];
+    currentQuestionIndex = 0;
+    
     // Your existing logout code...
+}
+
+function showCongratulationsScreen() {
+    const questionsContainer = document.getElementById('votingQuestions');
+    
+    questionsContainer.innerHTML = `
+        <div class="congratulations-screen">
+            <div class="celebration-container">
+                <div class="confetti-left"></div>
+                <div class="confetti-right"></div>
+                <div class="success-content">
+                    <div class="success-icon">🎉</div>
+                    <h2>Congratulations!</h2>
+                    <p>Your votes have been successfully submitted for MCA 2025.</p>
+                    <p>Thank you for participating!</p>
+                </div>
+            </div>
+        </div>
+    `;
 }

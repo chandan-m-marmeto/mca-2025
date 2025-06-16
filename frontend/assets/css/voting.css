@@ -31,6 +31,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+    margin-bottom: 1rem;
 }
 
 .review-question {
@@ -84,20 +85,6 @@
     font-weight: bold;
 }
 
-.btn-edit {
-    background: transparent;
-    border: 1px solid #2196F3;
-    color: #2196F3;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-edit:hover {
-    background: rgba(33, 150, 243, 0.1);
-}
-
 .btn-submit-final {
     background: #4CAF50;
     color: white;
@@ -120,6 +107,7 @@
     display: flex;
     justify-content: center;
     margin-top: 2rem;
+    padding-bottom: 2rem;
 }
 
 /* Celebration Screen Styles */
