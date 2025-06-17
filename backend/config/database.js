@@ -7,14 +7,16 @@ const connectDatabase = async () => {
         await mongoose.connect(mongoURI, {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            maxPoolSize: 100, // Increase connection pool size
-            minPoolSize: 10,  // Minimum connections to maintain
+            maxPoolSize: 150, // Increase connection pool size
+            minPoolSize: 20,  // Minimum connections to maintain
             socketTimeoutMS: 45000, // Socket timeout
             serverSelectionTimeoutMS: 5000, // Server selection timeout
             heartbeatFrequencyMS: 10000, // Heartbeat frequency
             retryWrites: true,
             w: 'majority', // Write concern for better data consistency
-            wtimeout: 2500 // Write concern timeout
+            wtimeout: 2500,// Write concern timeout
+            waitQueueTimeoutMS: 10000,  // How long a request waits for a connection
+            waitQueueSize: 1000
         });
 
         // Create indexes for better query performance
