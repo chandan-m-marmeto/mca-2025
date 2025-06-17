@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 
 const ADMIN_EMAIL = 'admin@marmeto.com';
-const NEW_PASSWORD = ''; // You can change this to any secure password
+const NEW_PASSWORD = 'Mmt@2025'; // You can change this to any secure password
 
 async function resetAdminPassword() {
     try {
