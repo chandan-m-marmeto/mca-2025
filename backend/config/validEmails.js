@@ -110,7 +110,9 @@ const validEmails = [
     'swathi@marmeto.com',
     'Amisha@marmeto.com',
     'shiva@marmeto.com',
-    'vikas@marmeto.com'
+    'vikas@marmeto.com',
+    'jeff@marmeto.com',
+    'gilbert@marmeto.com'
 ].map(email => email.toLowerCase()); // Convert all to lowercase for case-insensitive comparison
 
 export default validEmails;
