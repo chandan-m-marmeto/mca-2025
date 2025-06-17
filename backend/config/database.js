@@ -15,8 +15,6 @@ const connectDatabase = async () => {
             retryWrites: true,
             w: 'majority', // Write concern for better data consistency
             wtimeout: 2500,// Write concern timeout
-            waitQueueTimeoutMS: 10000,  // How long a request waits for a connection
-            waitQueueSize: 1000
         });
 
         // Create indexes for better query performance
